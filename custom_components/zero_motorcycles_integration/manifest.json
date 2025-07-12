@@ -1,12 +1,13 @@
 {
   "domain": "zero_motorcycles_integration",
-  "name": "Zero Motorcycles Integration",
+  "name": "Zero Motorcycles Integration 2",
   "codeowners": [
-    "@hanscappelle"
+    "@hanscappelle",
+    "@Beewitchy"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/hanscappelle/zero-motorcycles-integration",
+  "documentation": "https://github.com/Beewitchy/zero-motorcycles-integration",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/hanscappelle/zero-motorcycles-integration/issues",
-  "version": "0.5.2"
+  "issue_tracker": "https://github.com/Beewitchy/zero-motorcycles-integration/issues",
+  "version": "0.6.0"
 }

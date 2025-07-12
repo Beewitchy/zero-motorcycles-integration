@@ -29,9 +29,8 @@ SCAN_INTERVAL = DEFAULT_SCAN_INTERVAL
 class ZeroCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from API."""
 
-    configEntry: ConfigEntry
-    info: Any
-    client: ZeroApiClient
+    entry: ConfigEntry | None = None
+    client: ZeroApiClient | None = None
     units = {}  # all units fetched
 
     def __init__(
@@ -42,23 +41,14 @@ class ZeroCoordinator(DataUpdateCoordinator):
         """Initialize."""
         self.configEntry = configEntry
 
-        # get data from manifest here instead, is this the way to go?
-        # mostly done so we wouldn't have to change version in several places
-        self.info = json.load(
-            open("{}/{}".format(os.path.dirname(os.path.realpath(__file__)), "manifest.json"))
-        )
-        LOGGER.debug("loaded info %s", self.info)
-
         # TODO maybe keep track of vehicles instead of mapping data
         # self.vehicles = None
         self.data = {}
 
         # check options https://developers.home-assistant.io/docs/config_entries_options_flow_handler
-        scan_interval = timedelta(
-           seconds=self.configEntry.options.get(
-               CONF_SCAN_INTERVAL,
-               SCAN_INTERVAL.minutes,
-           )
+        scan_interval = self.configEntry.options.get(
+            CONF_SCAN_INTERVAL,
+            SCAN_INTERVAL,
         )
 
         super().__init__(
@@ -71,7 +61,7 @@ class ZeroCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Update data using API."""
         try:
-            if self.client is None:
+            if not self.client:
                 # Retrieve the stored credentials from config-flow
                 username = self.configEntry.data.get(CONF_USERNAME)
                 LOGGER.debug("Loaded %s: %s", CONF_USERNAME, username)
@@ -82,7 +72,7 @@ class ZeroCoordinator(DataUpdateCoordinator):
                     username=username,
                     password=password,
                     session=async_get_clientsession(self.hass),
-                ),
+                )
 
             # start by getting all units with given login
             self.units = await self.client.async_get_units()

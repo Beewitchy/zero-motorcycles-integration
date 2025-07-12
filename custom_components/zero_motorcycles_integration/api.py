@@ -94,6 +94,8 @@ class ZeroApiClient:
                 response.raise_for_status()
                 return await response.json()
 
+        except ZeroApiClientError:
+            raise
         except asyncio.TimeoutError as exception:
             raise ZeroApiClientCommunicationError(
                 "Timeout error fetching information",

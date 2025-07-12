@@ -5,7 +5,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_SCAN_INTERVAL
-from homeassistant.helpers import selector
+from homeassistant.helpers import selector, config_validation
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
@@ -18,24 +18,18 @@ from .api import (
     ZeroApiClientCommunicationError,
     ZeroApiClientError,
 )
-from .const import DOMAIN, LOGGER, DEFAULT_SCAN_INTERVAL
+from .const import DOMAIN, LOGGER, DEFAULT_SCAN_INTERVAL, SCAN_INTERVAL_MINIMUM
 
 SIMPLE_OPTIONS_SCHEMA = vol.Schema(
     {
         vol.Optional(
             CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                mode=selector.NumberSelectorMode.BOX,
-                unit_of_measurement="minutes",
-            ),
-        ),
+        ): vol.All(config_validation.time_period, vol.Range(min=SCAN_INTERVAL_MINIMUM)),
     }
 )
 
 OPTIONS_FLOW = {
-    "init": SchemaFlowFormStep(next_step="simple_options"),
-    "simple_options": SchemaFlowFormStep(SIMPLE_OPTIONS_SCHEMA),
+    "init": SchemaFlowFormStep(SIMPLE_OPTIONS_SCHEMA),
 }
 
 class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):

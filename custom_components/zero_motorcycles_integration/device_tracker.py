@@ -6,7 +6,7 @@ from typing import Any
 from homeassistant.components.device_tracker.const import SourceType
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 
-from .const import DOMAIN, LOGGER, PROP_VIN
+from .const import DOMAIN, LOGGER, PROP_VIN, PROP_UNITNUMBER
 from .coordinator import ZeroCoordinator
 from .entity import ZeroEntity
 
@@ -14,21 +14,24 @@ from .entity import ZeroEntity
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up device tracket by config_entry."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    entities = []
-    for unit in coordinator.units:
-        entities.append(
+
+    async_add_entities(
+        [
             ZeroTrackerEntity(
                 coordinator=coordinator,
-                unitnumber=unit["unitnumber"],
+                unit=unit,
             )
-        )
-    async_add_entities(entities, True)
+            for unit in coordinator.units
+        ],
+        True
+    )
 
 
 class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
     """A class representing a trackable device."""
 
     _attr_force_update = False
+    _attr_name = None
 
     def __init__(
         self,
@@ -39,7 +42,6 @@ class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
         super().__init__(coordinator, unit)
 
         self._attr_unique_id = unit[PROP_VIN]
-        self._attr_name = None
         LOGGER.debug("init tracker for %s", self.unitnumber)
 
     @property

@@ -10,7 +10,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
-from homeassistant.helpers import entity_platform, StateType
+from homeassistant.helpers import entity_platform
 
 from .const import DOMAIN, LOGGER
 from .coordinator import ZeroCoordinator
@@ -20,7 +20,6 @@ from .entity import ZeroEntity
 @dataclass
 class ZeroBinarySensorEntityDescription(BinarySensorEntityDescription):
     off_icon: str | None = None
-    value_fn: Callable[[Any], bool] = lambda sv: eval(sv)
     attr_fn: Callable[[Any], dict[str, Any]] | None = None
 
 SENSORS = (
@@ -101,7 +100,6 @@ async def async_setup_entry(hass, entry, async_add_entities: entity_platform.Add
             )
             for unitInfo in coordinator.units
             for entity_description in SENSORS
-            if entity_description.key in unitInfo
         ],
         True
     )
@@ -133,7 +131,10 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
             state,
         )
 
-        self._attr_is_on = self.entity_description.value_fn(state)
+        if isinstance(state, str):
+            state = eval(state)
+
+        self._attr_is_on = state
 
         if self.entity_description.off_icon:
             self._attr_icon = self.entity_description.icon if self._attr_is_on else self.entity_description.off_icon
@@ -145,9 +146,3 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
             )
 
         super()._handle_coordinator_update()
-
-    # @property
-    # def is_on(self) -> bool:
-    #     """Return true if the binary_sensor is on."""
-    #     value = self.coordinator.data[self.unitnumber][self.entity_description.key]
-    #     return value

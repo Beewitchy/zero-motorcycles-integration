@@ -5,7 +5,7 @@ from typing import Any
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import LOGGER, DOMAIN, BRAND, PROP_VIN, PROP_UNITNUMBER
+from .const import LOGGER, DOMAIN, BRAND, BRAND_ATTRIBUTION, PROP_VIN, PROP_UNITNUMBER
 from .coordinator import ZeroCoordinator
 
 
@@ -17,15 +17,14 @@ class ZeroEntity(CoordinatorEntity):
     unit: Any | None = None
     unitnumber: str | None = None
 
-    def __init__(self, coordinator: ZeroCoordinator, unit: Any | None) -> None:
+    def __init__(self, coordinator: ZeroCoordinator, unit: Any) -> None:
         """Initialize."""
         super().__init__(coordinator)
 
         self.unit = unit;
         # set unit number for unit reference here, this is used as a key in received data
-        if unit:
-            self.unitnumber = unit[PROP_UNITNUMBER]
-            self.vin = unit[PROP_VIN]
+        self.unitnumber = unit[PROP_UNITNUMBER]
+        self.vin = unit[PROP_VIN]
 
         data = {}
         if self.unitnumber:

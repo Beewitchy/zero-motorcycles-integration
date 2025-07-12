@@ -13,7 +13,8 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
 )
 from homeassistant.const import UnitOfLength, UnitOfSpeed, UnitOfElectricPotential, UnitOfTime, PERCENTAGE
-from homeassistant.helpers import entity_platform, StateType
+from homeassistant.helpers import entity_platform
+from homeassistant.util import dt as ha_dt
 
 from .const import DOMAIN, LOGGER
 from .coordinator import ZeroCoordinator
@@ -28,14 +29,15 @@ class ZeroSensorEntityDescription(SensorEntityDescription):
 
     def __post_init__(self):
         """Reverse-sort the icon set by the 'max value' attributes so the correct icon can be found by just searching through"""
-        self.iconset.sort(key=itemgetter(0), reverse=True)
+        if self.iconset:
+            self.iconset.sort(key=itemgetter(0), reverse=True)
 
 SENSORS = (
     ZeroSensorEntityDescription(
         key="soc",
         name="State of Charge",
         icon="mdi:battery-50",
-        iconset={(10, "mdi:battery-10"), (20, "mdi:battery-20"), (30, "mdi:battery-30"),(40, "mdi:battery-40"),(50, "mdi:battery-50"),(60, "mdi:battery-60"),(70, "mdi:battery-70"),(80, "mdi:battery-80"),(90, "mdi:battery-90"),(100, "mdi:battery")},
+        iconset=[(10, "mdi:battery-10"), (20, "mdi:battery-20"), (30, "mdi:battery-30"),(40, "mdi:battery-40"),(50, "mdi:battery-50"),(60, "mdi:battery-60"),(70, "mdi:battery-70"),(80, "mdi:battery-80"),(90, "mdi:battery-90"),(100, "mdi:battery")],
         device_class=SensorDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
     ),
@@ -52,7 +54,7 @@ SENSORS = (
         icon="mdi:update",
         device_class=SensorDeviceClass.TIMESTAMP,
         native_unit_of_measurement=None,
-        value_fn=lambda v: datetime.strptime(v, '%Y%m%d%H%M%S').isoformat(),
+        value_fn=lambda v: datetime.strptime(v, '%Y%m%d%H%M%S'),
     ),
     ZeroSensorEntityDescription(
         key="datetime_utc",
@@ -60,11 +62,11 @@ SENSORS = (
         icon="mdi:map-marker-up",
         device_class=SensorDeviceClass.TIMESTAMP,
         native_unit_of_measurement=None,
-        value_fn=lambda v: datetime.strptime(v, '%Y%m%d%H%M%S').isoformat(),
+        value_fn=lambda v: datetime.strptime(v, '%Y%m%d%H%M%S'),
     ),
     ZeroSensorEntityDescription(
         key="altitude",
-        name="altitude",
+        name="Altitude",
         icon="mdi:elevation-rise",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UnitOfLength.METERS,
@@ -120,7 +122,6 @@ async def async_setup_entry(hass, entry, async_add_entities: entity_platform.Add
             )
             for unitInfo in coordinator.units
             for entity_description in SENSORS
-            if entity_description.key in unitInfo
         ],
         True
     )
@@ -140,7 +141,7 @@ class ZeroSensor(ZeroEntity, SensorEntity):
 
         self.entity_description = entity_description
 
-        self._attr_unique_id = f"{self.unitnumber}-{entity_description.key}"
+        self._attr_unique_id = f"{self.vin}-{entity_description.key}"
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -153,9 +154,12 @@ class ZeroSensor(ZeroEntity, SensorEntity):
             state,
         )
 
-        self._attr_native_value = cast(
-            StateType, self.entity_description.value_fn(state)
-        )
+        state = self.entity_description.value_fn(state)
+
+        if isinstance(state, datetime) and state.tzinfo is None:
+            state = state.replace(tzinfo=ha_dt.get_default_time_zone())
+
+        self._attr_native_value = state
 
         if self.entity_description.iconset:
             for (maxValue, icon) in self.entity_description.iconset:

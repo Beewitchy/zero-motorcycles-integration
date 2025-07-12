@@ -1,6 +1,6 @@
 {
-    "name": "Zero Motorcycles Integration",
-    "filename": "zero_motorcycles_integration.zip",
+    "name": "Zero Motorcycles Integration 2",
+    "filename": "zero_motorcycles_integration2.zip",
     "hide_default_branch": true,
     "homeassistant": "2023.1.7",
     "render_readme": true,

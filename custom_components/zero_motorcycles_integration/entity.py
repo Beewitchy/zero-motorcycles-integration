@@ -1,43 +1,44 @@
 """ZeroEntity class."""
 from __future__ import annotations
-
-import json
-import os
+from typing import Any
 
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import LOGGER
+from .const import LOGGER, DOMAIN, BRAND, PROP_VIN, PROP_UNITNUMBER
 from .coordinator import ZeroCoordinator
 
 
 class ZeroEntity(CoordinatorEntity):
     """Zero Entity class."""
 
-    _attr_attribution = None
+    _attr_attribution = BRAND_ATTRIBUTION
 
-    def __init__(self, coordinator: ZeroCoordinator) -> None:
+    unit: Any | None = None
+    unitnumber: str | None = None
+
+    def __init__(self, coordinator: ZeroCoordinator, unit: Any | None) -> None:
         """Initialize."""
         super().__init__(coordinator)
 
-        # get data from manifest here instead, is this the way to go?
-        # mostly done so we wouldn't have to change version in several places
-        info = json.load(
-            open("{}/{}".format(os.path.dirname(os.path.realpath(__file__)), "manifest.json"))
-        )
-        LOGGER.debug("loaded info %s", info)
-        # this was crashing the integration after fixing GPS depreciation
-        #self._attr_attribution = info["attribution"]
+        self.unit = unit;
+        # set unit number for unit reference here, this is used as a key in received data
+        if unit:
+            self.unitnumber = unit[PROP_UNITNUMBER]
+            self.vin = unit[PROP_VIN]
 
-        if not coordinator.units:
-            LOGGER.debug("no units were fetched, no devices to create here")
+        data = {}
+        if self.unitnumber:
+            data = coordinator.data[self.unitnumber]
+
+        if not self.unit:
+            LOGGER.warning("no vehicle unit number provided to entity")
         else:
-            # 1 entity created with sensors repeated for all units
-            self._attr_unique_id = coordinator.config_entry.entry_id
             self._attr_device_info = DeviceInfo(
-                identifiers={(info["domain"], self.unique_id)},
-                # name="Zero Unit [" + coordinator.units[0]["unitnumber"] + "]",
-                name="Zero Motorcycles",  # generic name, not one per unit
-                model=info["version"],
-                manufacturer=info["name"],
+                identifiers={(DOMAIN, self.vin)},
+                name=self.unitnumber,
+                model=self.unit["vehiclemodel"],
+                model_id=self.unit["unitmodel"],
+                manufacturer=BRAND,
+                sw_version=data["software_version"] or None
             )

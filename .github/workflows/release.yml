@@ -27,9 +27,9 @@ jobs:
         shell: "bash"
         run: |
           cd "${{ github.workspace }}/custom_components/zero_motorcycles_integration"
-          zip zero_motorcycles_integration.zip -r ./
+          zip zero_motorcycles_integration2.zip -r ./
 
       - name: "Upload the ZIP file to the release"
         uses: softprops/action-gh-release@v0.1.15
         with:
-          files: ${{ github.workspace }}/custom_components/zero_motorcycles_integration/zero_motorcycles_integration.zip
+          files: ${{ github.workspace }}/custom_components/zero_motorcycles_integration/zero_motorcycles_integration2.zip

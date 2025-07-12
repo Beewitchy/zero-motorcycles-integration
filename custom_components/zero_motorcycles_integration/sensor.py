@@ -1,98 +1,105 @@
 """Sensor platform for zero_motorcycles_integration."""
 from __future__ import annotations
 
+from typing import Any, Callable, List, cast
+from datetime import datetime
+from operator import itemgetter
+from dataclasses import dataclass
+
+from homeassistant.core import callback
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorDeviceClass,
 )
 from homeassistant.const import UnitOfLength, UnitOfSpeed, UnitOfElectricPotential, UnitOfTime, PERCENTAGE
+from homeassistant.helpers import entity_platform, StateType
 
 from .const import DOMAIN, LOGGER
 from .coordinator import ZeroCoordinator
 from .entity import ZeroEntity
 
+
+@dataclass
+class ZeroSensorEntityDescription(SensorEntityDescription):
+    value_fn: Callable = lambda sv: sv
+    # Mapping of (max value, icon)
+    iconset: List[(float, str)] | None = None
+
+    def __post_init__(self):
+        """Reverse-sort the icon set by the 'max value' attributes so the correct icon can be found by just searching through"""
+        self.iconset.sort(key=itemgetter(0), reverse=True)
+
 SENSORS = (
-    SensorEntityDescription(
-        key="zero_motorcycles",
-        name="soc",
-        icon="mdi:battery-charging-50",
+    ZeroSensorEntityDescription(
+        key="soc",
+        name="State of Charge",
+        icon="mdi:battery-50",
+        iconset={(10, "mdi:battery-10"), (20, "mdi:battery-20"), (30, "mdi:battery-30"),(40, "mdi:battery-40"),(50, "mdi:battery-50"),(60, "mdi:battery-60"),(70, "mdi:battery-70"),(80, "mdi:battery-80"),(90, "mdi:battery-90"),(100, "mdi:battery")},
         device_class=SensorDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
     ),
-    SensorEntityDescription(
-        key="zero_motorcycles",
-        name="name",
-        icon="mdi:id-card",
-        device_class=None,
-        native_unit_of_measurement=None,
-    ),
-    SensorEntityDescription(
-        key="zero_motorcycles",
-        name="mileage",
+    ZeroSensorEntityDescription(
+        key="mileage",
+        name="Milage",
         icon="mdi:gauge",
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
     ),
-    SensorEntityDescription(
-        key="zero_motorcycles",
-        name="software_version",
-        icon="mdi:bug",
-        device_class=None,
+    ZeroSensorEntityDescription(
+        key="datetime_actual",
+        name="Last data received",
+        icon="mdi:update",
+        device_class=SensorDeviceClass.TIMESTAMP,
         native_unit_of_measurement=None,
+        value_fn=lambda v: datetime.strptime(v, '%Y%m%d%H%M%S').isoformat(),
     ),
-    SensorEntityDescription(
-        key="zero_motorcycles",
-        name="longitude",
-        icon="mdi:map-marker",
-        device_class=None,
+    ZeroSensorEntityDescription(
+        key="datetime_utc",
+        name="Last GPS update",
+        icon="mdi:map-marker-up",
+        device_class=SensorDeviceClass.TIMESTAMP,
         native_unit_of_measurement=None,
+        value_fn=lambda v: datetime.strptime(v, '%Y%m%d%H%M%S').isoformat(),
     ),
-    SensorEntityDescription(
-        key="zero_motorcycles",
-        name="latitude",
-        icon="mdi:map-marker",
-        device_class=None,
-        native_unit_of_measurement=None,
-    ),
-    SensorEntityDescription(
-        key="zero_motorcycles",
+    ZeroSensorEntityDescription(
+        key="altitude",
         name="altitude",
-        icon="mdi:image-filter-hdr",
-        device_class=None,
-        native_unit_of_measurement=None,
+        icon="mdi:elevation-rise",
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UnitOfLength.METERS,
     ),
-    SensorEntityDescription(
-        key="zero_motorcycles",
-        name="satellites",
+    ZeroSensorEntityDescription(
+        key="satellites",
+        name="Satalites",
         icon="mdi:satellite-variant",
         device_class=None,
         native_unit_of_measurement=None,
     ),
-    SensorEntityDescription(
-        key="zero_motorcycles",
-        name="velocity",
+    ZeroSensorEntityDescription(
+        key="velocity",
+        name="Velocity",
         icon="mdi:gauge",
         device_class=SensorDeviceClass.SPEED,
         native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
     ),
-    SensorEntityDescription(
-        key="zero_motorcycles",
-        name="heading",
+    ZeroSensorEntityDescription(
+        key="heading",
+        name="Heading",
         icon="mdi:compass",
         device_class=None,
         native_unit_of_measurement=None,
     ),
-    SensorEntityDescription(
-        key="zero_motorcycles",
-        name="main_voltage",
+    ZeroSensorEntityDescription(
+        key="main_voltage",
+        name="Accessory battery voltage",
         icon="mdi:car-battery",
         device_class=SensorDeviceClass.VOLTAGE,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
     ),
-    SensorEntityDescription(
-        key="zero_motorcycles",
-        name="chargingtimeleft",
+    ZeroSensorEntityDescription(
+        key="chargingtimeleft",
+        name="Charging time remaining",
         icon="mdi:battery-clock",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
@@ -100,26 +107,23 @@ SENSORS = (
 )
 
 
-async def async_setup_entry(hass, entry, async_add_devices):
+async def async_setup_entry(hass, entry, async_add_entities: entity_platform.AddEntitiesCallback):
     """Set up the sensor platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
-    # create sensors for all units found, not just the first one
-    # work with an array of devices
-    devices = []
-
-    for unit in coordinator.units:
-        for sensor in SENSORS:
-            devices.append(
-                ZeroSensor(
-                    coordinator=coordinator,
-                    entity_description=sensor,
-                    unitnumber=unit["unitnumber"],
-                    sensor_name=sensor.name,
-                )
+    async_add_entities(
+        [
+            ZeroSensor(
+                coordinator,
+                entity_description,
+                unit=unitInfo
             )
-
-    async_add_devices(devices, True)
+            for unitInfo in coordinator.units
+            for entity_description in SENSORS
+            if entity_description.key in unitInfo
+        ],
+        True
+    )
 
 
 class ZeroSensor(ZeroEntity, SensorEntity):
@@ -129,39 +133,33 @@ class ZeroSensor(ZeroEntity, SensorEntity):
         self,
         coordinator: ZeroCoordinator,
         entity_description: SensorEntityDescription,
-        unitnumber: str,
-        sensor_name: str,
+        unit: Any,
     ) -> None:
         """Initialize the sensor class."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, unit)
 
-        # set unit number for unit reference here, this is used as a key in received data
-        self.unitnumber = unitnumber
-        self.sensor_name = sensor_name  # used for data point refererence
-
-        # had to create unique IDs per sensor here, using key.name
-        self._attr_unique_id = (
-            entity_description.key + "." + unitnumber + "." + entity_description.name
-        )
-        self._name = unitnumber + " " + entity_description.name
-        # make names unique per unit
-        # entity_description.name = sensor_name + "." + unitnumber
-        # entity_description.key = "unit." + unitnumber + "." + entity_description.name
         self.entity_description = entity_description
 
-    @property
-    def name(self):
-        """Return the name of the device."""
-        return self._name
+        self._attr_unique_id = f"{self.unitnumber}-{entity_description.key}"
 
-    @property
-    def native_value(self) -> str:
-        """Return the native value of the sensor."""
-        # value = self.coordinator.data[self.unitnumber][0][sensor]
-        value = self.coordinator.data[self.unitnumber][0][self.sensor_name]
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+
+        state = self.coordinator.data[self.unitnumber][self.entity_description.key]
         LOGGER.debug(
             "Sensor value for %s is %s",
             self.unique_id,
-            value,
+            state,
         )
-        return value
+
+        self._attr_native_value = cast(
+            StateType, self.entity_description.value_fn(state)
+        )
+
+        if self.entity_description.iconset:
+            for (maxValue, icon) in self.entity_description.iconset:
+                if self._attr_native_value < maxValue:
+                    self._attr_icon = icon
+
+        super()._handle_coordinator_update()

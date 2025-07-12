@@ -1,80 +1,110 @@
 """Binary sensor platform for integration_blueprint."""
 from __future__ import annotations
 
+from typing import Callable, Any, cast
+from dataclasses import dataclass
+
+from homeassistant.core import callback
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.helpers import entity_platform, StateType
 
 from .const import DOMAIN, LOGGER
 from .coordinator import ZeroCoordinator
 from .entity import ZeroEntity
 
+
+@dataclass
+class ZeroBinarySensorEntityDescription(BinarySensorEntityDescription):
+    off_icon: str | None = None
+    value_fn: Callable[[Any], bool] = lambda sv: eval(sv)
+    attr_fn: Callable[[Any], dict[str, Any]] | None = None
+
 SENSORS = (
-    BinarySensorEntityDescription(
-        key="zero_motorcycles",
-        name="tipover",
-        icon="mdi:chat-alert",
+    ZeroBinarySensorEntityDescription(
+        key="tipover",
+        name="Tipped over",
+        icon="mdi:alert",
+        off_icon="mdi:emoticon-happy",
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
-    BinarySensorEntityDescription(
-        key="zero_motorcycles",
-        name="gps_valid",
-        icon="mdi:crosshairs-gps",
+    ZeroBinarySensorEntityDescription(
+        key="gps_valid",
+        name="GPS accurate",
+        icon="mdi:map-marker-alert",
+        off_icon="mdi:map-marker",
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
-    BinarySensorEntityDescription(
-        key="zero_motorcycles",
-        name="gps_connected",
-        icon="mdi:crosshairs-gps",
+    ZeroBinarySensorEntityDescription(
+        key="gps_connected",
+        name="GPS connected",
+        icon="mdi:signal",
+        off_icon="mdi:signal-off",
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
     ),
-    BinarySensorEntityDescription(
-        key="zero_motorcycles",
-        name="charging",
-        icon="mdi:ev-station",
+    ZeroBinarySensorEntityDescription(
+        key="charging",
+        name="Charging",
+        icon="mdi:battery-charging",
+        off_icon="mdi:battery",
         device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
     ),
-    BinarySensorEntityDescription(
-        key="zero_motorcycles",
-        name="chargecomplete",
-        icon="mdi:battery-charging-100",
+    ZeroBinarySensorEntityDescription(
+        key="chargecomplete",
+        name="Charging complete",
+        icon="mdi:battery-check",
+        off_icon="mdi:battery-outline",
     ),
-    BinarySensorEntityDescription(
-        key="zero_motorcycles",
-        name="pluggedin",
+    ZeroBinarySensorEntityDescription(
+        key="pluggedin",
+        name="Plugged in",
         icon="mdi:power-plug",
+        off_icon="mdi:power-plug-off",
         device_class=BinarySensorDeviceClass.PLUG,
     ),
-    BinarySensorEntityDescription(
-        key="zero_motorcycles",
-        name="storage",
+    ZeroBinarySensorEntityDescription(
+        key="storage",
+        name="Storage mode",
         icon="mdi:sleep",
+        off_icon="mdi:sleep-off",
+    ),
+    ZeroBinarySensorEntityDescription(
+        key="ignition",
+        name="Ignition",
+        icon="mdi:toggle-switch-variant",
+        off_icon="mdi:toggle-switch-variant-off",
+        device_class=BinarySensorDeviceClass.RUNNING,
+    ),
+    ZeroBinarySensorEntityDescription(
+        key="lock",
+        name="Steering unlocked",
+        icon="mdi:lock-open",
+        off_icon="mdi:lock",
+        device_class=BinarySensorDeviceClass.LOCK,
     ),
 )
 
 
-async def async_setup_entry(hass, entry, async_add_devices):
+async def async_setup_entry(hass, entry, async_add_entities: entity_platform.AddEntitiesCallback):
     """Set up the binary_sensor platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: ZeroCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    # create sensors for all units found, not just the first one
-    # work with an array of devices
-    devices = []
-
-    for unit in coordinator.units:
-        for sensor in SENSORS:
-            devices.append(
-                ZeroBinarySensor(
-                    coordinator=coordinator,
-                    entity_description=sensor,
-                    unitnumber=unit["unitnumber"],
-                    sensor_name=sensor.name,
-                )
+    async_add_entities(
+        [
+            ZeroBinarySensor(
+                coordinator,
+                entity_description,
+                unit=unitInfo
             )
-
-    async_add_devices(devices, True)
+            for unitInfo in coordinator.units
+            for entity_description in SENSORS
+            if entity_description.key in unitInfo
+        ],
+        True
+    )
 
 
 class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
@@ -83,39 +113,41 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
     def __init__(
         self,
         coordinator: ZeroCoordinator,
-        entity_description: BinarySensorEntityDescription,
-        unitnumber: str,
-        sensor_name: str,
+        entity_description: ZeroBinarySensorEntityDescription,
+        unit: Any,
     ) -> None:
         """Initialize the binary_sensor class."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, unit)
 
-        # set unit number for unit reference here, this is used as a key in received data
-        self.unitnumber = unitnumber
-        self.sensor_name = sensor_name  # used for data point refererence
-
-        # had to create unique IDs per sensor here, using key.name
-        self._attr_unique_id = (
-            entity_description.key + "." + unitnumber + "." + entity_description.name
-        )
-        self._name = unitnumber + " " + entity_description.name
-        # make names unique per unit
-        # entity_description.name = (sensor_name + "." + unitnumber)
         self.entity_description = entity_description
 
-    @property
-    def name(self):
-        """Return the name of the device."""
-        return self._name
+        self._attr_unique_id = f"{self.vin}-{entity_description.key}"
 
-    @property
-    def is_on(self) -> bool:
-        """Return true if the binary_sensor is on."""
-        # sensor = self.entity_description.name
-        value = self.coordinator.data[self.unitnumber][0][self.sensor_name]
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        state = self.coordinator.data[self.unitnumber][self.entity_description.key]
         LOGGER.debug(
             "Sensor value for %s is %s",
             self.unique_id,
-            value,
+            state,
         )
-        return value
+
+        self._attr_is_on = self.entity_description.value_fn(state)
+
+        if self.entity_description.off_icon:
+            self._attr_icon = self.entity_description.icon if self._attr_is_on else self.entity_description.off_icon
+
+        if self.entity_description.attr_fn:
+            self._attr_extra_state_attributes = dict(
+                "vin", self.vin,
+                **self.entity_description.attr_fn(self.vehicle, self._unit_system),
+            )
+
+        super()._handle_coordinator_update()
+
+    # @property
+    # def is_on(self) -> bool:
+    #     """Return true if the binary_sensor is on."""
+    #     value = self.coordinator.data[self.unitnumber][self.entity_description.key]
+    #     return value

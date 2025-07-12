@@ -5,4 +5,4 @@ default_config:
 logger:
   default: info
   logs:
-    custom_components.zero_motorcycles_integration: debug
+    custom_components.zero_motorcycles_integration2: debug

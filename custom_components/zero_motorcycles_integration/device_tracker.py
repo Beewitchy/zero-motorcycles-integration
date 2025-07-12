@@ -1,9 +1,12 @@
 """Support for tracking devices."""
+from __future__ import annotations
+
+from typing import Any
 
 from homeassistant.components.device_tracker.const import SourceType
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN, LOGGER, PROP_VIN
 from .coordinator import ZeroCoordinator
 from .entity import ZeroEntity
 
@@ -25,26 +28,34 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
     """A class representing a trackable device."""
 
+    _attr_force_update = False
+
     def __init__(
         self,
         coordinator: ZeroCoordinator,
-        unitnumber: str,
+        unit: Any,
     ) -> None:
         """Initialize the sensor class."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, unit)
 
-        self.unit_number = unitnumber
-        LOGGER.debug("init tracker for %s", self.unit_number)
+        self._attr_unique_id = unit[PROP_VIN]
+        self._attr_name = None
+        LOGGER.debug("init tracker for %s", self.unitnumber)
 
     @property
-    def latitude(self) -> float | type(None):
+    def battery_level(self) -> int | None:
+        """Return battery level value of the device."""
+        return self.coordinator.data[self.unitnumber]["soc"]
+
+    @property
+    def latitude(self) -> float | None:
         """Return latitude value of the device."""
-        return self.coordinator.data[self.unit_number][0]["latitude"]
+        return self.coordinator.data[self.unitnumber]["latitude"]
 
     @property
-    def longitude(self) -> float | type(None):
+    def longitude(self) -> float | None:
         """Return longitude value of the device."""
-        return self.coordinator.data[self.unit_number][0]["longitude"]
+        return self.coordinator.data[self.unitnumber]["longitude"]
 
     @property
     def source_type(self):
@@ -54,18 +65,22 @@ class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
     @property
     def icon(self):
         """Return the icon of the sensor."""
-        return "mdi:crosshairs-gps"
+        if eval(self.coordinator.data[self.unitnumber]["gps_valid"]):
+            return "mdi:motorbike-electric"
+        else:
+            return "mdi:motorbike-off"
 
     @property
     def extra_state_attributes(self):
         """Return the state attributes of the device."""
-        heading = self.coordinator.data[self.unit_number][0]["heading"]
-        velocity = self.coordinator.data[self.unit_number][0]["velocity"]
-        altitude = self.coordinator.data[self.unit_number][0]["altitude"]
-        gps_connected = self.coordinator.data[self.unit_number][0]["gps_connected"]
-        gps_valid = self.coordinator.data[self.unit_number][0]["gps_valid"]
-        satellites = self.coordinator.data[self.unit_number][0]["satellites"]
-        name = self.coordinator.data[self.unit_number][0]["name"]
+        heading = self.coordinator.data[self.unitnumber]["heading"]
+        velocity = self.coordinator.data[self.unitnumber]["velocity"]
+        altitude = self.coordinator.data[self.unitnumber]["altitude"]
+        gps_connected = self.coordinator.data[self.unitnumber]["gps_connected"]
+        gps_valid = self.coordinator.data[self.unitnumber]["gps_valid"]
+        satellites = self.coordinator.data[self.unitnumber]["satellites"]
+        name = self.coordinator.data[self.unitnumber][PROP_VIN]
+        address = self.coordinator.data[self.unitnumber]["address"]
         return {
             "heading": heading,
             "vin": name,
@@ -74,4 +89,5 @@ class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
             "gps_connected": gps_connected,
             "gps_valid": gps_valid,
             "satellites": satellites,
+            "address": address,
         }

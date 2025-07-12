@@ -3,9 +3,14 @@ from __future__ import annotations
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import callback
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_SCAN_INTERVAL
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from homeassistant.helpers.schema_config_entry_flow import (
+    SchemaFlowFormStep,
+    SchemaOptionsFlowHandler,
+)
 
 from .api import (
     ZeroApiClient,
@@ -13,8 +18,25 @@ from .api import (
     ZeroApiClientCommunicationError,
     ZeroApiClientError,
 )
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN, LOGGER, DEFAULT_SCAN_INTERVAL
 
+SIMPLE_OPTIONS_SCHEMA = vol.Schema(
+    {
+        vol.Optional(
+            CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                mode=selector.NumberSelectorMode.BOX,
+                unit_of_measurement="minutes",
+            ),
+        ),
+    }
+)
+
+OPTIONS_FLOW = {
+    "init": SchemaFlowFormStep(next_step="simple_options"),
+    "simple_options": SchemaFlowFormStep(SIMPLE_OPTIONS_SCHEMA),
+}
 
 class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Configuration flow implementation."""
@@ -26,10 +48,12 @@ class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         user_input: dict | None = None,
     ) -> config_entries.FlowResult:
         """Handle a flow initialized by the user."""
+        client: ZeroApiClient | None = None
+        units = []
         _errors = {}
         if user_input is not None:
             try:
-                await self._test_credentials(
+                units, client = await self.attempt_access(
                     username=user_input[CONF_USERNAME],
                     password=user_input[CONF_PASSWORD],
                 )
@@ -70,11 +94,19 @@ class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=_errors,
         )
 
-    async def _test_credentials(self, username: str, password: str) -> None:
-        """Validate credentials."""
+    async def attempt_access(self, username: str, password: str) -> None:
+        """Validate credentials & get tracked units."""
         client = ZeroApiClient(
             username=username,
             password=password,
             session=async_create_clientsession(self.hass),
         )
-        await client.async_get_units()  # this only requires username and password and retrieves unit numbers
+        return await client.async_get_units(), client  # this only requires username and password and retrieves unit numbers
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> SchemaOptionsFlowHandler:
+        """Get options flow for this handler."""
+        return SchemaOptionsFlowHandler(config_entry, OPTIONS_FLOW)

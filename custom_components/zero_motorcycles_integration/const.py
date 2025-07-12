@@ -1,7 +1,14 @@
 """Constants for zero_motorcycles_integration."""
+from datetime import timedelta
 from logging import Logger, getLogger
 
 LOGGER: Logger = getLogger(__package__)
 
-# we keep these constants, these shouldn't change anyway
-DOMAIN = "zero_motorcycles_integration"
+DOMAIN = "zero_motorcycles_integration2"
+BRAND = "Zero Motorcycles"
+BRAND_ATTRIBUTION = "Zero Motorcycles, Inc."
+
+PROP_VIN = "name"
+PROP_UNITNUMBER = "unitnumber"
+
+DEFAULT_SCAN_INTERVAL = timedelta(minutes=30)

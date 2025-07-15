@@ -14,7 +14,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_platform
 
-from .api import TrackingUnitStateKeys
+from .api import TrackingUnit, TrackingUnitStateKeys
 from .const import DOMAIN, LOGGER
 from .coordinator import ZeroCoordinator
 from .entity import ZeroEntity
@@ -22,7 +22,7 @@ from .entity import ZeroEntity
 
 @dataclass(frozen=True)
 class ZeroBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """."""
+    """Senses."""
 
     off_icon: str | None = None
     attr_fn: Callable[[Any], dict[str, Any]] | None = None
@@ -122,7 +122,7 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
         self,
         coordinator: ZeroCoordinator,
         entity_description: ZeroBinarySensorEntityDescription,
-        unit: Any,
+        unit: TrackingUnit,
     ) -> None:
         """Initialize the binary_sensor class."""
         super().__init__(coordinator, unit)
@@ -134,18 +134,17 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        state = self.coordinator.data[self.unitnumber][self.entity_description.key] if self.unitnumber and self.coordinator.data else None
+
+        state = self.coordinator.data.get(self.unitnumber, {}).get(self.entity_description.data_key) if self.coordinator.data else None
         LOGGER.debug(
             "Sensor value for %s is %s",
             self.unique_id,
             state,
         )
 
-        zeroEntityDesc = cast(ZeroBinarySensorEntityDescription, self.entity_description)
-
         if isinstance(state, str):
-            state = state.casefold() in ("true", "on", "1")
-        elif state:
+            state = state.lower() in {"true", "on", "1"}
+        elif state is not None:
             state = bool(state)
         else:
             LOGGER.warning(
@@ -157,7 +156,7 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
 
         self._attr_is_on = state
 
-        if zeroEntityDesc.off_icon:
-            self._attr_icon = zeroEntityDesc.icon if self._attr_is_on else zeroEntityDesc.off_icon
+        if self.entity_description.off_icon:
+            self._attr_icon = self.entity_description.icon if self._attr_is_on else self.entity_description.off_icon
 
         super()._handle_coordinator_update()

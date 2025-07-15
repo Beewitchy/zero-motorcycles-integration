@@ -26,6 +26,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_platform
 from homeassistant.util import dt as dt_util
 
+from .api import TrackingUnit, TrackingUnitStateKeys
 from .const import DOMAIN, LOGGER
 from .coordinator import ZeroCoordinator
 from .entity import ZeroEntity
@@ -43,6 +44,11 @@ class ZeroSensorEntityDescription(SensorEntityDescription):
         """Reverse-sort the icon set by the 'max value' attributes so the correct icon can be found by just searching through."""
         if self.iconset:
             self.iconset.sort(key=itemgetter(0), reverse=True)
+
+    @property
+    def data_key(self) -> TrackingUnitStateKeys:
+        """Literalifies."""
+        return cast(TrackingUnitStateKeys, self.key)
 
 SENSORS = (
     ZeroSensorEntityDescription(
@@ -135,6 +141,7 @@ SENSORS = (
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: entity_platform.AddEntitiesCallback):
     """Set up the sensor platform."""
+
     coordinator : ZeroCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
@@ -158,7 +165,7 @@ class ZeroSensor(ZeroEntity, SensorEntity):
         self,
         coordinator: ZeroCoordinator,
         entity_description: ZeroSensorEntityDescription,
-        unit: Any,
+        unit: TrackingUnit,
     ) -> None:
         """Initialize the sensor class."""
         super().__init__(coordinator, unit)
@@ -171,24 +178,22 @@ class ZeroSensor(ZeroEntity, SensorEntity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
 
-        state = self.coordinator.data.get(self.unitnumber, {}).get(self.entity_description.key) if self.coordinator.data else None
+        state = self.coordinator.data.get(self.unitnumber, {}).get(self.entity_description.data_key) if self.coordinator.data else None
         LOGGER.debug(
             "Sensor value for %s is %s",
             self.unique_id,
             state,
         )
 
-        zeroEntityDesc = cast(ZeroSensorEntityDescription, self.entity_description)
-
-        state = zeroEntityDesc.value_fn(state)
+        state = self.entity_description.value_fn(state)
 
         if isinstance(state, datetime) and state.tzinfo is None:
             state = state.replace(tzinfo=dt_util.get_default_time_zone())
 
         self._attr_native_value = state
 
-        if isinstance(state, int | float) and zeroEntityDesc.iconset:
-            for (maxValue, icon) in zeroEntityDesc.iconset:
+        if isinstance(state, int | float) and self.entity_description.iconset:
+            for (maxValue, icon) in self.entity_description.iconset:
                 if state < maxValue:
                     self._attr_icon = icon
 

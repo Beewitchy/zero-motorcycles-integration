@@ -5,7 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from operator import itemgetter
-from typing import Any, cast
+from typing import cast
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,

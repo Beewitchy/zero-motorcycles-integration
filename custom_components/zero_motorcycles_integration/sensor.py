@@ -11,6 +11,8 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
     SensorDeviceClass,
+    SensorStateClass,
+    DEGREE
 )
 from homeassistant.const import UnitOfLength, UnitOfSpeed, UnitOfElectricPotential, UnitOfTime, PERCENTAGE
 from homeassistant.helpers import entity_platform
@@ -39,13 +41,15 @@ SENSORS = (
         icon="mdi:battery-50",
         iconset=[(10, "mdi:battery-10"), (20, "mdi:battery-20"), (30, "mdi:battery-30"),(40, "mdi:battery-40"),(50, "mdi:battery-50"),(60, "mdi:battery-60"),(70, "mdi:battery-70"),(80, "mdi:battery-80"),(90, "mdi:battery-90"),(100, "mdi:battery")],
         device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
     ),
     ZeroSensorEntityDescription(
         key="mileage",
-        name="Milage",
+        name="Mileage",
         icon="mdi:gauge",
         device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.TOTAL,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
     ),
     ZeroSensorEntityDescription(
@@ -53,7 +57,6 @@ SENSORS = (
         name="Last data received",
         icon="mdi:update",
         device_class=SensorDeviceClass.TIMESTAMP,
-        native_unit_of_measurement=None,
         value_fn=lambda v: datetime.strptime(v, '%Y%m%d%H%M%S'),
     ),
     ZeroSensorEntityDescription(
@@ -61,7 +64,6 @@ SENSORS = (
         name="Last GPS update",
         icon="mdi:map-marker-up",
         device_class=SensorDeviceClass.TIMESTAMP,
-        native_unit_of_measurement=None,
         value_fn=lambda v: datetime.strptime(v, '%Y%m%d%H%M%S'),
     ),
     ZeroSensorEntityDescription(
@@ -69,6 +71,7 @@ SENSORS = (
         name="Altitude",
         icon="mdi:elevation-rise",
         device_class=SensorDeviceClass.DISTANCE,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfLength.METERS,
     ),
     ZeroSensorEntityDescription(
@@ -83,6 +86,7 @@ SENSORS = (
         name="Velocity",
         icon="mdi:gauge",
         device_class=SensorDeviceClass.SPEED,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
     ),
     ZeroSensorEntityDescription(
@@ -90,13 +94,16 @@ SENSORS = (
         name="Heading",
         icon="mdi:compass",
         device_class=None,
-        native_unit_of_measurement=None,
+        state_class=SensorStateClass.MEASUREMENT_ANGLE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=DEGREE,
     ),
     ZeroSensorEntityDescription(
         key="main_voltage",
         name="Accessory battery voltage",
         icon="mdi:car-battery",
         device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
     ),
     ZeroSensorEntityDescription(

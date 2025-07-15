@@ -23,8 +23,6 @@ from .api import (
 )
 from .const import DOMAIN, LOGGER, DEFAULT_SCAN_INTERVAL
 
-SCAN_INTERVAL = DEFAULT_SCAN_INTERVAL
-
 # https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
 class ZeroCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from API."""
@@ -48,7 +46,7 @@ class ZeroCoordinator(DataUpdateCoordinator):
         # check options https://developers.home-assistant.io/docs/config_entries_options_flow_handler
         scan_interval = self.configEntry.options.get(
             CONF_SCAN_INTERVAL,
-            SCAN_INTERVAL,
+            DEFAULT_SCAN_INTERVAL,
         )
 
         super().__init__(

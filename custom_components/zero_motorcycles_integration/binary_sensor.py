@@ -139,10 +139,4 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
         if self.entity_description.off_icon:
             self._attr_icon = self.entity_description.icon if self._attr_is_on else self.entity_description.off_icon
 
-        if self.entity_description.attr_fn:
-            self._attr_extra_state_attributes = dict(
-                "vin", self.vin,
-                **self.entity_description.attr_fn(self.vehicle, self._unit_system),
-            )
-
         super()._handle_coordinator_update()

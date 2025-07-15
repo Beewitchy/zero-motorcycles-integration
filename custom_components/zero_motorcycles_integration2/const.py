@@ -8,8 +8,5 @@ DOMAIN = "zero_motorcycles_integration2"
 BRAND = "Zero Motorcycles"
 BRAND_ATTRIBUTION = "Zero Motorcycles, Inc."
 
-PROP_VIN = "name"
-PROP_UNITNUMBER = "unitnumber"
-
 DEFAULT_SCAN_INTERVAL = timedelta(minutes=30)
 SCAN_INTERVAL_MINIMUM = timedelta(seconds=30)

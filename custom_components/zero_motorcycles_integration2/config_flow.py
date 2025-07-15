@@ -1,11 +1,15 @@
 """Adds config flow for Blueprint."""
 from __future__ import annotations
 
+from typing import Any
+
 import voluptuous as vol
+
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
 from homeassistant.core import callback
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_SCAN_INTERVAL
-from homeassistant.helpers import selector, config_validation
+from homeassistant.helpers import config_validation as cv, selector
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
@@ -18,13 +22,13 @@ from .api import (
     ZeroApiClientCommunicationError,
     ZeroApiClientError,
 )
-from .const import DOMAIN, LOGGER, DEFAULT_SCAN_INTERVAL, SCAN_INTERVAL_MINIMUM
+from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, LOGGER, SCAN_INTERVAL_MINIMUM
 
 SIMPLE_OPTIONS_SCHEMA = vol.Schema(
     {
         vol.Optional(
             CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
-        ): vol.All(config_validation.time_period, vol.Range(min=SCAN_INTERVAL_MINIMUM)),
+        ): vol.All(cv.time_period, vol.Range(min=SCAN_INTERVAL_MINIMUM)),
     }
 )
 
@@ -40,7 +44,7 @@ class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self,
         user_input: dict | None = None,
-    ) -> config_entries.FlowResult:
+    ) -> ConfigFlowResult:
         """Handle a flow initialized by the user."""
         client: ZeroApiClient | None = None
         units = []
@@ -88,7 +92,7 @@ class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=_errors,
         )
 
-    async def attempt_access(self, username: str, password: str) -> None:
+    async def attempt_access(self, username: str, password: str) -> tuple[Any, ZeroApiClient]:
         """Validate credentials & get tracked units."""
         client = ZeroApiClient(
             username=username,

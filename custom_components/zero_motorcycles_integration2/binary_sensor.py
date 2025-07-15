@@ -1,26 +1,35 @@
 """Binary sensor platform for integration_blueprint."""
 from __future__ import annotations
 
-from typing import Callable, Any, cast
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any, cast
 
-from homeassistant.core import callback
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_platform
 
+from .api import TrackingUnitStateKeys
 from .const import DOMAIN, LOGGER
 from .coordinator import ZeroCoordinator
 from .entity import ZeroEntity
 
 
-@dataclass
+@dataclass(frozen=True)
 class ZeroBinarySensorEntityDescription(BinarySensorEntityDescription):
+    """?"""
     off_icon: str | None = None
     attr_fn: Callable[[Any], dict[str, Any]] | None = None
+
+    @property
+    def data_key(self) -> TrackingUnitStateKeys:
+        """Literalifies."""
+        return cast(TrackingUnitStateKeys, self.key)
 
 SENSORS = (
     ZeroBinarySensorEntityDescription(
@@ -86,8 +95,7 @@ SENSORS = (
     ),
 )
 
-
-async def async_setup_entry(hass, entry, async_add_entities: entity_platform.AddEntitiesCallback):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: entity_platform.AddEntitiesCallback):
     """Set up the binary_sensor platform."""
     coordinator: ZeroCoordinator = hass.data[DOMAIN][entry.entry_id]
 
@@ -124,19 +132,30 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        state = self.coordinator.data[self.unitnumber][self.entity_description.key]
+        state = self.coordinator.data[self.unitnumber][self.entity_description.key] if self.unitnumber and self.coordinator.data else None
         LOGGER.debug(
             "Sensor value for %s is %s",
             self.unique_id,
             state,
         )
 
+        zeroEntityDesc = cast(ZeroBinarySensorEntityDescription, self.entity_description)
+
         if isinstance(state, str):
-            state = eval(state)
+            state = state.casefold() in ("true", "on", "1")
+        elif state:
+            state = bool(state)
+        else:
+            LOGGER.warning(
+                "Invalid sensor value for %s: %s",
+                self.unique_id,
+                state,
+            )
+            state = None
 
         self._attr_is_on = state
 
-        if self.entity_description.off_icon:
-            self._attr_icon = self.entity_description.icon if self._attr_is_on else self.entity_description.off_icon
+        if zeroEntityDesc.off_icon:
+            self._attr_icon = zeroEntityDesc.icon if self._attr_is_on else zeroEntityDesc.off_icon
 
         super()._handle_coordinator_update()

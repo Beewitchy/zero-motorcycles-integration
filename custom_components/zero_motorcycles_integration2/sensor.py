@@ -1,36 +1,45 @@
 """Sensor platform for zero_motorcycles_integration."""
 from __future__ import annotations
 
-from typing import Any, Callable, List, cast
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from operator import itemgetter
-from dataclasses import dataclass
+from typing import Any, cast
 
-from homeassistant.core import callback
 from homeassistant.components.sensor import (
+    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
-    SensorDeviceClass,
     SensorStateClass,
-    DEGREE
 )
-from homeassistant.const import UnitOfLength, UnitOfSpeed, UnitOfElectricPotential, UnitOfTime, PERCENTAGE
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    DEGREE,
+    PERCENTAGE,
+    UnitOfElectricPotential,
+    UnitOfLength,
+    UnitOfSpeed,
+    UnitOfTime,
+)
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_platform
-from homeassistant.util import dt as ha_dt
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, LOGGER
 from .coordinator import ZeroCoordinator
 from .entity import ZeroEntity
 
 
-@dataclass
+@dataclass(frozen=True)
 class ZeroSensorEntityDescription(SensorEntityDescription):
+    """"Does what it says on the tin."""
     value_fn: Callable = lambda sv: sv
     # Mapping of (max value, icon)
-    iconset: List[(float, str)] | None = None
+    iconset: list[tuple[float, str]] | None = None
 
     def __post_init__(self):
-        """Reverse-sort the icon set by the 'max value' attributes so the correct icon can be found by just searching through"""
+        """Reverse-sort the icon set by the 'max value' attributes so the correct icon can be found by just searching through."""
         if self.iconset:
             self.iconset.sort(key=itemgetter(0), reverse=True)
 
@@ -95,7 +104,6 @@ SENSORS = (
         icon="mdi:compass",
         device_class=None,
         state_class=SensorStateClass.MEASUREMENT_ANGLE,
-        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=DEGREE,
     ),
     ZeroSensorEntityDescription(
@@ -113,12 +121,20 @@ SENSORS = (
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
     ),
+    ZeroSensorEntityDescription(
+        key="battery",
+        name="Tracking module battery",
+        icon="mdi:battery",
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+    ),
 )
 
 
-async def async_setup_entry(hass, entry, async_add_entities: entity_platform.AddEntitiesCallback):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: entity_platform.AddEntitiesCallback):
     """Set up the sensor platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator : ZeroCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
         [
@@ -140,7 +156,7 @@ class ZeroSensor(ZeroEntity, SensorEntity):
     def __init__(
         self,
         coordinator: ZeroCoordinator,
-        entity_description: SensorEntityDescription,
+        entity_description: ZeroSensorEntityDescription,
         unit: Any,
     ) -> None:
         """Initialize the sensor class."""
@@ -154,23 +170,25 @@ class ZeroSensor(ZeroEntity, SensorEntity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
 
-        state = self.coordinator.data[self.unitnumber][self.entity_description.key]
+        state = self.coordinator.data.get(self.unitnumber, {}).get(self.entity_description.key) if self.coordinator.data else None
         LOGGER.debug(
             "Sensor value for %s is %s",
             self.unique_id,
             state,
         )
 
-        state = self.entity_description.value_fn(state)
+        zeroEntityDesc = cast(ZeroSensorEntityDescription, self.entity_description)
+
+        state = zeroEntityDesc.value_fn(state)
 
         if isinstance(state, datetime) and state.tzinfo is None:
-            state = state.replace(tzinfo=ha_dt.get_default_time_zone())
+            state = state.replace(tzinfo=dt_util.get_default_time_zone())
 
         self._attr_native_value = state
 
-        if self.entity_description.iconset:
-            for (maxValue, icon) in self.entity_description.iconset:
-                if self._attr_native_value < maxValue:
+        if isinstance(state, (int, float)) and zeroEntityDesc.iconset:
+            for (maxValue, icon) in zeroEntityDesc.iconset:
+                if state < maxValue:
                     self._attr_icon = icon
 
         super()._handle_coordinator_update()

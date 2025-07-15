@@ -7,12 +7,129 @@ https://bitbucket.org/cappelleh/zengo-android/src/master/
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 import socket
-from typing import Any
+from typing import Any, Literal, Required, TypedDict
 
 import aiohttp
-import async_timeout
 
+PROP_VIN = "name" # the tracking unit property we expect to contain the VIN
+
+
+class TrackingUnit(TypedDict, total=False):
+    """!"""
+    unitnumber: Required[str]
+    name: Required[str]
+    address: str
+    vehiclemodel: str
+    vehiclecolor: str
+    unittype: str | int
+    icon: str | int
+    active: str | int | bool
+    unitmodel: str | int
+    regnumber: str
+    platenumber: str | None
+    custom: list[Any]
+
+class TrackingUnitState(TypedDict, total=False):
+    """:P."""
+    unitnumber: Required[str]
+    name: str
+    unittype: str | int
+    unitmodel: str | int
+    analog1: float
+    analog2: float
+    mileage: float | str
+    software_version: str | datetime
+    logic_state: int | str
+    reason: int | str
+    response: int | str
+    driver: int | str
+    longitude: float
+    latitude: float
+    altitude: float | str
+    gps_valid: bool | int | str
+    gps_connected: bool | int | str
+    satellites: int | str
+    velocity: float | str
+    heading: float | str
+    emergency: bool | int | str
+    shock: bool | float | str
+    ignition: bool | int | str
+    door: bool | int | str
+    hood: bool | int | str
+    volume: float | str
+    water_temp: float | str
+    oil_pressure: float | str
+    main_voltage: float
+    fuel: float | str
+    analog3: float
+    siren: bool | float | str
+    lock: bool | float | str
+    int_lights: bool | float | str
+    datetime_utc: datetime | str
+    datetime_actual: datetime | str
+    address: str
+    perimeter: str
+    color: int
+    soc: int
+    tipover: bool | int
+    charging: bool | int
+    chargecomplete: bool | int
+    pluggedin: bool | int
+    chargingtimeleft: int | float # measured in minutes
+    storage: bool | int
+    battery: float | int
+
+TrackingUnitStateKeys = Literal[
+    "unitnumber",
+    "name",
+    "unittype",
+    "unitmodel",
+    "analog1",
+    "analog2",
+    "mileage",
+    "software_version",
+    "logic_state",
+    "reason",
+    "response",
+    "driver",
+    "longitude",
+    "latitude",
+    "altitude",
+    "gps_valid",
+    "gps_connected",
+    "satellites",
+    "velocity",
+    "heading",
+    "emergency",
+    "shock",
+    "ignition",
+    "door",
+    "hood",
+    "volume",
+    "water_temp",
+    "oil_pressure",
+    "main_voltage",
+    "fuel",
+    "analog3",
+    "siren",
+    "lock",
+    "int_lights",
+    "datetime_utc",
+    "datetime_actual",
+    "address",
+    "perimeter",
+    "color",
+    "soc",
+    "tipover",
+    "charging",
+    "chargecomplete",
+    "pluggedin",
+    "chargingtimeleft",
+    "storage",
+    "battery",
+]
 
 class ZeroApiClientError(Exception):
     """Exception to indicate a general API error."""
@@ -40,7 +157,7 @@ class ZeroApiClient:
         self._password = password
         self._session = session
 
-    async def async_get_units(self) -> Any:
+    async def async_get_units(self) -> list[TrackingUnit]:
         """Get available unit numbers for given credentials from API."""
         return await self._api_wrapper(
             method="get",
@@ -53,7 +170,7 @@ class ZeroApiClient:
             }
         )
 
-    async def async_get_last_transmit(self, unitnumber) -> Any:
+    async def async_get_last_transmit(self, unitnumber) -> TrackingUnitState:
         """Get available available data from API."""
         result = await self._api_wrapper(
             method="get",
@@ -68,8 +185,8 @@ class ZeroApiClient:
         )
         if not len(result) == 1:
             raise ZeroApiClientCommunicationError("Unexpected response value: {result}")
-        else:
-            return result[0]
+
+        return result[0] # only expecting the result for one unit
 
     async def _api_wrapper(
         self,
@@ -80,29 +197,33 @@ class ZeroApiClient:
     ) -> Any:
         """Get information from the API."""
         try:
-            async with async_timeout.timeout(10):
+            async with asyncio.timeout(10):
                 response = await self._session.request(
                     method=method,
                     url=url,
                     params=params,
                     json=json,
                 )
-                if response.status in (401, 403, 601):
-                    raise ZeroApiClientAuthenticationError(
-                        "Invalid credentials",
-                    )
-                response.raise_for_status()
-                return await response.json()
+            response.raise_for_status()
+            return await response.json()
 
-        except ZeroApiClientError:
-            raise
-        except asyncio.TimeoutError as exception:
+        except TimeoutError as exception:
             raise ZeroApiClientCommunicationError(
                 "Timeout error fetching information",
             ) from exception
+        except aiohttp.ClientResponseError as exception:
+            if exception.status in (401, 403, 601):
+                raise ZeroApiClientAuthenticationError(
+                    "Invalid credentials",
+                ) from exception
+
+            raise ZeroApiClientCommunicationError(
+                "Unexpected response",
+            ) from exception
         except (aiohttp.ClientError, socket.gaierror) as exception:
             raise ZeroApiClientCommunicationError(
-                "Error fetching information",
+                "Couldn't make api request",
             ) from exception
         except Exception as exception:  # pylint: disable=broad-except
             raise ZeroApiClientError("Something really wrong happened!") from exception
+

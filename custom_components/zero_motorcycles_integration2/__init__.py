@@ -10,20 +10,19 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN
 from .coordinator import ZeroCoordinator
 
 PLATFORMS: list[Platform] = [
-    Platform.SENSOR,
     Platform.BINARY_SENSOR,
     Platform.DEVICE_TRACKER,
+    Platform.SENSOR,
 ]
 
 
 # https://developers.home-assistant.io/docs/config_entries_index/#setting-up-an-entry
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Provide configuration entry for HomeAssistant framework.
-    """
+    """Provide configuration entry for HomeAssistant framework."""
 
     coordinator = ZeroCoordinator(
         hass=hass,

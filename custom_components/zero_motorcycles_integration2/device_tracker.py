@@ -1,17 +1,24 @@
 """Support for tracking devices."""
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
-from homeassistant.components.device_tracker.const import SourceType
-from homeassistant.components.device_tracker.config_entry import TrackerEntity
+from propcache.api import cached_property
 
-from .const import DOMAIN, LOGGER, PROP_VIN, PROP_UNITNUMBER
+from homeassistant.components.device_tracker.config_entry import TrackerEntity
+from homeassistant.components.device_tracker.const import SourceType
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_platform
+
+from .api import PROP_VIN, TrackingUnit
+from .const import DOMAIN, LOGGER
 from .coordinator import ZeroCoordinator
 from .entity import ZeroEntity
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: entity_platform.AddEntitiesCallback):
     """Set up device tracket by config_entry."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
 
@@ -26,7 +33,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         True
     )
 
-
 class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
     """A class representing a trackable device."""
 
@@ -36,7 +42,7 @@ class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
     def __init__(
         self,
         coordinator: ZeroCoordinator,
-        unit: Any,
+        unit: TrackingUnit,
     ) -> None:
         """Initialize the sensor class."""
         super().__init__(coordinator, unit)
@@ -44,52 +50,51 @@ class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
         self._attr_unique_id = unit[PROP_VIN]
         LOGGER.debug("init tracker for %s", self.unitnumber)
 
-    @property
+    @cached_property
     def battery_level(self) -> int | None:
         """Return battery level value of the device."""
-        return self.coordinator.data[self.unitnumber]["soc"]
+        return self.coordinator.data.get(self.unitnumber, {}).get("soc") if self.coordinator.data else None
 
-    @property
+    @cached_property
     def latitude(self) -> float | None:
         """Return latitude value of the device."""
-        return self.coordinator.data[self.unitnumber]["latitude"]
+        return self.coordinator.data.get(self.unitnumber, {}).get("latitude") if self.coordinator.data else None
 
-    @property
+    @cached_property
     def longitude(self) -> float | None:
         """Return longitude value of the device."""
-        return self.coordinator.data[self.unitnumber]["longitude"]
+        return self.coordinator.data.get(self.unitnumber, {}).get("longitude") if self.coordinator.data else None
 
     @property
     def source_type(self):
         """Return the source type, eg gps or router, of the device."""
         return SourceType.GPS
 
-    @property
+    @cached_property
     def icon(self):
         """Return the icon of the sensor."""
-        if eval(self.coordinator.data[self.unitnumber]["gps_valid"]):
+        gpsValid = self.coordinator.data.get(self.unitnumber, {}).get("gps_valid") if self.coordinator.data else None
+        if gpsValid and int(gpsValid):
             return "mdi:motorbike-electric"
-        else:
-            return "mdi:motorbike-off"
+        return "mdi:motorbike-off"
 
-    @property
-    def extra_state_attributes(self):
+    @cached_property
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return the state attributes of the device."""
-        heading = self.coordinator.data[self.unitnumber]["heading"]
-        velocity = self.coordinator.data[self.unitnumber]["velocity"]
-        altitude = self.coordinator.data[self.unitnumber]["altitude"]
-        gps_connected = self.coordinator.data[self.unitnumber]["gps_connected"]
-        gps_valid = self.coordinator.data[self.unitnumber]["gps_valid"]
-        satellites = self.coordinator.data[self.unitnumber]["satellites"]
-        name = self.coordinator.data[self.unitnumber][PROP_VIN]
-        address = self.coordinator.data[self.unitnumber]["address"]
+        unit = self.coordinator.data.get(self.unitnumber, {}) if self.coordinator.data else None
+        if not unit:
+            return None
+
         return {
-            "heading": heading,
-            "vin": name,
-            "velocity": velocity,
-            "altitude": altitude,
-            "gps_connected": gps_connected,
-            "gps_valid": gps_valid,
-            "satellites": satellites,
-            "address": address,
+            key: value
+            for key, value in unit.items()
+            if key in {
+                "heading",
+                "velocity",
+                "altitude",
+                "gps_connected",
+                "gps_valid",
+                "satellites",
+                "address"
+            }
         }

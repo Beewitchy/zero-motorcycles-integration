@@ -17,7 +17,8 @@ PROP_VIN = "name" # the tracking unit property we expect to contain the VIN
 
 
 class TrackingUnit(TypedDict, total=False):
-    """!"""
+    """Data returned when requesting units."""
+
     unitnumber: Required[str]
     name: Required[str]
     address: str
@@ -32,7 +33,8 @@ class TrackingUnit(TypedDict, total=False):
     custom: list[Any]
 
 class TrackingUnitState(TypedDict, total=False):
-    """:P."""
+    """Data returned when requesting update."""
+
     unitnumber: Required[str]
     name: str
     unittype: str | int

@@ -34,6 +34,7 @@ from .entity import ZeroEntity
 @dataclass(frozen=True)
 class ZeroSensorEntityDescription(SensorEntityDescription):
     """"Does what it says on the tin."""
+
     value_fn: Callable = lambda sv: sv
     # Mapping of (max value, icon)
     iconset: list[tuple[float, str]] | None = None
@@ -186,7 +187,7 @@ class ZeroSensor(ZeroEntity, SensorEntity):
 
         self._attr_native_value = state
 
-        if isinstance(state, (int, float)) and zeroEntityDesc.iconset:
+        if isinstance(state, int | float) and zeroEntityDesc.iconset:
             for (maxValue, icon) in zeroEntityDesc.iconset:
                 if state < maxValue:
                     self._attr_icon = icon

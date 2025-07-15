@@ -22,7 +22,8 @@ from .entity import ZeroEntity
 
 @dataclass(frozen=True)
 class ZeroBinarySensorEntityDescription(BinarySensorEntityDescription):
-    """?"""
+    """."""
+
     off_icon: str | None = None
     attr_fn: Callable[[Any], dict[str, Any]] | None = None
 
@@ -97,6 +98,7 @@ SENSORS = (
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: entity_platform.AddEntitiesCallback):
     """Set up the binary_sensor platform."""
+
     coordinator: ZeroCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(

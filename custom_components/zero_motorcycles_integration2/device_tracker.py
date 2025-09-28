@@ -16,6 +16,7 @@ from .api import PROP_VIN, TrackingUnit
 from .const import DOMAIN, LOGGER
 from .coordinator import ZeroCoordinator
 from .entity import ZeroEntity
+from .binary import parse_state_as_bool
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: entity_platform.AddEntitiesCallback):
@@ -74,7 +75,7 @@ class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
     def icon(self):
         """Return the icon of the sensor."""
         gpsValid = self.coordinator.data.get(self.unitnumber, {}).get("gps_valid") if self.coordinator.data else None
-        if gpsValid and int(gpsValid):
+        if gpsValid and parse_state_as_bool(gpsValid):
             return "mdi:motorbike-electric"
         return "mdi:motorbike-off"
 

@@ -25,7 +25,7 @@ class ZeroBinarySensorEntityDescription(BinarySensorEntityDescription):
     """Senses."""
 
     off_icon: str | None = None
-    attr_fn: Callable[[Any], dict[str, Any]] | None = None
+    value_fn: Callable[[bool], bool] = lambda sv: sv
 
     @property
     def data_key(self) -> TrackingUnitStateKeys:
@@ -42,9 +42,10 @@ SENSORS = (
     ),
     ZeroBinarySensorEntityDescription(
         key="gps_valid",
-        name="GPS accurate",
+        name="GPS invalid",
         icon="mdi:map-marker-alert",
         off_icon="mdi:map-marker",
+        value_fn=lambda sv: not sv
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
     ZeroBinarySensorEntityDescription(
@@ -86,14 +87,7 @@ SENSORS = (
         icon="mdi:toggle-switch-variant",
         off_icon="mdi:toggle-switch-variant-off",
         device_class=BinarySensorDeviceClass.RUNNING,
-    ),
-    ZeroBinarySensorEntityDescription(
-        key="lock",
-        name="Steering unlocked",
-        icon="mdi:lock-open",
-        off_icon="mdi:lock",
-        device_class=BinarySensorDeviceClass.LOCK,
-    ),
+    )
 )
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: entity_platform.AddEntitiesCallback):
@@ -114,6 +108,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         True
     )
 
+def parse_state_as_bool(state: bool | int | float | str) -> bool:
+    if state is bool:
+        state
+    elif isinstance(state, str):
+        state = state.lower() in {"true", "on", "1"}
+    elif state is not None:
+        state = bool(state)
+    else:
+        LOGGER.warning(
+            "Invalid sensor value for %s: %s",
+            self.unique_id,
+            state,
+        )
+        state = None
+    state
 
 class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
     """integration_blueprint binary_sensor class."""
@@ -142,17 +151,9 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
             state,
         )
 
-        if isinstance(state, str):
-            state = state.lower() in {"true", "on", "1"}
-        elif state is not None:
-            state = bool(state)
-        else:
-            LOGGER.warning(
-                "Invalid sensor value for %s: %s",
-                self.unique_id,
-                state,
-            )
-            state = None
+        state = parse_state_as_bool(state)
+
+        state = self.entity_description.value_fn(state)
 
         self._attr_is_on = state
 

@@ -103,7 +103,7 @@ SENSORS = (
         icon="mdi:gauge",
         device_class=SensorDeviceClass.SPEED,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
+        native_unit_of_measurement=UnitOfSpeed.MILES_PER_HOUR,
     ),
     ZeroSensorEntityDescription(
         key="heading",
@@ -157,6 +157,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         True
     )
 
+def parse_state_as_bool(state: bool | int | float | str) -> bool:
+    if state is bool:
+        state
+    elif isinstance(state, str):
+        state = state.lower() in {"true", "on", "1"}
+    elif state is not None:
+        state = bool(state)
+    else:
+        LOGGER.warning(
+            "Invalid sensor value for %s: %s",
+            self.unique_id,
+            state,
+        )
+        state = None
 
 class ZeroSensor(ZeroEntity, SensorEntity):
     """zero_motorcycles_integration Sensor class."""

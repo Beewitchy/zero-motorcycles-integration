@@ -51,17 +51,17 @@ class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
         self._attr_unique_id = unit[PROP_VIN]
         LOGGER.debug("init tracker for %s", self.unitnumber)
 
-    @cached_property
+    @property
     def battery_level(self) -> int | None:
         """Return battery level value of the device."""
         return self.coordinator.data.get(self.unitnumber, {}).get("soc") if self.coordinator.data else None
 
-    @cached_property
+    @property
     def latitude(self) -> float | None:
         """Return latitude value of the device."""
         return self.coordinator.data.get(self.unitnumber, {}).get("latitude") if self.coordinator.data else None
 
-    @cached_property
+    @property
     def longitude(self) -> float | None:
         """Return longitude value of the device."""
         return self.coordinator.data.get(self.unitnumber, {}).get("longitude") if self.coordinator.data else None
@@ -71,15 +71,15 @@ class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
         """Return the source type, eg gps or router, of the device."""
         return SourceType.GPS
 
-    @cached_property
+    @property
     def icon(self):
         """Return the icon of the sensor."""
-        gpsValid = self.coordinator.data.get(self.unitnumber, {}).get("gps_valid") if self.coordinator.data else None
-        if gpsValid and parse_state_as_bool(gpsValid):
+        currentState = self.coordinator.data.get(self.unitnumber, {}).get("ignition") if self.coordinator.data else None
+        if parse_state_as_bool(currentState):
             return "mdi:motorbike-electric"
-        return "mdi:motorbike-off"
+        return "mdi:parking"
 
-    @cached_property
+    @property
     def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return the state attributes of the device."""
         unit = self.coordinator.data.get(self.unitnumber, {}) if self.coordinator.data else None
@@ -95,7 +95,7 @@ class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
                 "altitude",
                 "gps_connected",
                 "gps_valid",
-                "satellites",
+                "ignition",
                 "address"
             }
         }

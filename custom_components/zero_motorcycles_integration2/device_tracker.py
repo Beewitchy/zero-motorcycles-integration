@@ -4,8 +4,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from propcache.api import cached_property
-
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 from homeassistant.components.device_tracker.const import SourceType
 from homeassistant.config_entries import ConfigEntry

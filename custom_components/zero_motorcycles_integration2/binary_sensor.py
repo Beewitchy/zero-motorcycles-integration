@@ -45,7 +45,7 @@ SENSORS = (
         name="GPS invalid",
         icon="mdi:map-marker-alert",
         off_icon="mdi:map-marker",
-        value_fn=lambda sv: not sv
+        value_fn=lambda sv: not sv,
         device_class=BinarySensorDeviceClass.PROBLEM,
     ),
     ZeroBinarySensorEntityDescription(

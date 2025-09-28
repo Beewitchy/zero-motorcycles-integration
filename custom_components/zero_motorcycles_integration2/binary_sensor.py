@@ -109,7 +109,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     )
 
 def parse_state_as_bool(state: bool | int | float | str) -> bool:
-    '''interpret one of the many values the api provides for toggle states as a bool'''
+    """interpret one of the many values the api provides for toggle states as a bool"""
     if state is bool:
         state
     elif isinstance(state, str):

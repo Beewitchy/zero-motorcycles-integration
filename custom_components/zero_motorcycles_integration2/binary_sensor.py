@@ -42,7 +42,7 @@ SENSORS = (
     ),
     ZeroBinarySensorEntityDescription(
         key="gps_valid",
-        name="GPS invalid",
+        name="GPS valid",
         icon="mdi:map-marker-alert",
         off_icon="mdi:map-marker",
         value_fn=lambda sv: not sv,

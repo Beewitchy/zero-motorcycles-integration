@@ -110,15 +110,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 def parse_state_as_bool(state: bool | int | float | str) -> bool | None:
     """Interpret one of the many values the api provides for toggle states as a bool."""
-    if state is bool:
-        state
+    if isinstance(state, bool):
+        return state
     elif isinstance(state, str):
         state = state.lower() in {"true", "on", "1"}
     elif state is not None:
         state = bool(state)
     else:
         state = None
-    state
+    return state
 
 class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
     """integration_blueprint binary_sensor class."""

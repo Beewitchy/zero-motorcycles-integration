@@ -108,8 +108,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         True
     )
 
-def parse_state_as_bool(state: bool | int | float | str) -> bool:
-    """interpret one of the many values the api provides for toggle states as a bool"""
+def parse_state_as_bool(state: bool | int | float | str) -> bool | None:
+    """Interpret one of the many values the api provides for toggle states as a bool."""
     if state is bool:
         state
     elif isinstance(state, str):
@@ -117,11 +117,6 @@ def parse_state_as_bool(state: bool | int | float | str) -> bool:
     elif state is not None:
         state = bool(state)
     else:
-        LOGGER.warning(
-            "Invalid sensor value for %s: %s",
-            self.unique_id,
-            state,
-        )
         state = None
     state
 
@@ -154,7 +149,14 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
 
         state = parse_state_as_bool(state)
 
-        state = self.entity_description.value_fn(state)
+        if (state is not None):
+            state = self.entity_description.value_fn(state)
+        else
+            LOGGER.warning(
+                "Invalid sensor value for %s: %s",
+                self.unique_id,
+                state,
+            )
 
         self._attr_is_on = state
 

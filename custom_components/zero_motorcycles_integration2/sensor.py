@@ -157,21 +157,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         True
     )
 
-def parse_state_as_bool(state: bool | int | float | str) -> bool:
-    if state is bool:
-        state
-    elif isinstance(state, str):
-        state = state.lower() in {"true", "on", "1"}
-    elif state is not None:
-        state = bool(state)
-    else:
-        LOGGER.warning(
-            "Invalid sensor value for %s: %s",
-            self.unique_id,
-            state,
-        )
-        state = None
-
 class ZeroSensor(ZeroEntity, SensorEntity):
     """zero_motorcycles_integration Sensor class."""
 
@@ -199,10 +184,17 @@ class ZeroSensor(ZeroEntity, SensorEntity):
             state,
         )
 
-        state = self.entity_description.value_fn(state)
+        if state is not None
+            state = self.entity_description.value_fn(state)
 
-        if isinstance(state, datetime) and state.tzinfo is None:
-            state = state.replace(tzinfo=dt_util.get_default_time_zone())
+            if isinstance(state, datetime) and state.tzinfo is None:
+                state = state.replace(tzinfo=dt_util.get_default_time_zone())
+        else
+            LOGGER.warning(
+                "Invalid sensor value for %s: %s",
+                self.unique_id,
+                state,
+            )
 
         self._attr_native_value = state
 

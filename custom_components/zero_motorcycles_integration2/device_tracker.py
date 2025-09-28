@@ -16,7 +16,7 @@ from .api import PROP_VIN, TrackingUnit
 from .const import DOMAIN, LOGGER
 from .coordinator import ZeroCoordinator
 from .entity import ZeroEntity
-from .binary import parse_state_as_bool
+from .binary_sensor import parse_state_as_bool
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: entity_platform.AddEntitiesCallback):

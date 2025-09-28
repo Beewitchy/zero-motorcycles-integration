@@ -189,7 +189,7 @@ class ZeroSensor(ZeroEntity, SensorEntity):
 
             if isinstance(state, datetime) and state.tzinfo is None:
                 state = state.replace(tzinfo=dt_util.get_default_time_zone())
-        else
+        else:
             LOGGER.warning(
                 "Invalid sensor value for %s: %s",
                 self.unique_id,

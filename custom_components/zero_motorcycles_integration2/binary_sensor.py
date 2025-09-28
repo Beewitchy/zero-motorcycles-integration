@@ -151,7 +151,7 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
 
         if (state is not None):
             state = self.entity_description.value_fn(state)
-        else
+        else:
             LOGGER.warning(
                 "Invalid sensor value for %s: %s",
                 self.unique_id,

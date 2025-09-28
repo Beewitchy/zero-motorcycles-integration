@@ -184,7 +184,7 @@ class ZeroSensor(ZeroEntity, SensorEntity):
             state,
         )
 
-        if state is not None
+        if state is not None:
             state = self.entity_description.value_fn(state)
 
             if isinstance(state, datetime) and state.tzinfo is None:

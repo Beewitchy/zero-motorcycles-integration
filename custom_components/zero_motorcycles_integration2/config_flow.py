@@ -1,4 +1,4 @@
-"""Adds config flow for Blueprint."""
+"""Adds config flow."""
 from __future__ import annotations
 
 from typing import Any
@@ -35,6 +35,7 @@ SIMPLE_OPTIONS_SCHEMA = vol.Schema(
 OPTIONS_FLOW = {
     "init": SchemaFlowFormStep(SIMPLE_OPTIONS_SCHEMA),
 }
+
 
 class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Configuration flow implementation."""
@@ -75,8 +76,7 @@ class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_USERNAME,
-                        default=(user_input or {}).get(CONF_USERNAME),
+                        CONF_USERNAME
                     ): selector.TextSelector(
                         selector.TextSelectorConfig(
                             type=selector.TextSelectorType.TEXT

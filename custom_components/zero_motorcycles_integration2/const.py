@@ -1,12 +1,15 @@
 """Constants for zero_motorcycles_integration."""
 from datetime import timedelta
 from logging import Logger, getLogger
+from typing import Final
 
 LOGGER: Logger = getLogger(__package__)
 
-DOMAIN = "zero_motorcycles_integration2"
-BRAND = "Zero Motorcycles"
-BRAND_ATTRIBUTION = "Zero Motorcycles, Inc."
+DOMAIN: Final = "zero_motorcycles_integration2"
+BRAND: Final = "Zero Motorcycles"
+BRAND_ATTRIBUTION: Final = "Zero Motorcycles, Inc."
 
-DEFAULT_SCAN_INTERVAL = timedelta(minutes=30)
-SCAN_INTERVAL_MINIMUM = timedelta(seconds=30)
+CONF_RAPID_SCAN_INTERVAL: Final = "rapid_scan_interval"
+
+DEFAULT_SCAN_INTERVAL: Final = timedelta(minutes=30)
+DEFAULT_RAPID_SCAN_INTERVAL: Final = timedelta(seconds=30)

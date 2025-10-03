@@ -10,6 +10,8 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .binary_sensor import parse_state_as_bool
+
 from .api import (
     TrackingUnit,
     TrackingUnitState,
@@ -17,7 +19,15 @@ from .api import (
     ZeroApiClientAuthenticationError,
     ZeroApiClientError,
 )
-from .const import DEFAULT_SCAN_INTERVAL, LOGGER
+from .const import DEFAULT_SCAN_INTERVAL, LOGGER, CONF_RAPID_SCAN_INTERVAL, DEFAULT_RAPID_SCAN_INTERVAL
+
+
+class UnitScanState:
+    """Thingy."""
+
+    enable_rapid_scan: bool = False
+    rapid_scan_auto_enabled: bool = False
+    data_last_updated_time: datetime = datetime.min
 
 
 # https://developers.home-assistant.io/docs/integration_fetching_data#coordinated-single-api-poll-for-data-for-all-entities
@@ -26,9 +36,12 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
 
     entry: ConfigEntry | None = None
     client: ZeroApiClient | None = None
-    units: list[TrackingUnit] = [] # all units fetched
+    units: list[TrackingUnit] = []
     units_last_updated_time: datetime = datetime.min
     refresh_units_interval = timedelta(hours=12)
+    units_scan_state: dict[str, UnitScanState] = {}
+    scan_interval: timedelta = DEFAULT_SCAN_INTERVAL
+    rapid_scan_interval: timedelta = DEFAULT_RAPID_SCAN_INTERVAL
 
     def __init__(
         self,
@@ -39,17 +52,35 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
         self.configEntry = configEntry
 
         # check options https://developers.home-assistant.io/docs/config_entries_options_flow_handler
-        scan_interval = self.configEntry.options.get(
+        self.scan_interval = self.configEntry.options.get(
             CONF_SCAN_INTERVAL,
             DEFAULT_SCAN_INTERVAL,
+        )
+
+        self.rapid_scan_interval = self.configEntry.options.get(
+            CONF_RAPID_SCAN_INTERVAL,
+            DEFAULT_RAPID_SCAN_INTERVAL,
         )
 
         super().__init__(
             hass=hass,
             logger=LOGGER,
             name=configEntry.title,
-            update_interval=scan_interval,
+            update_interval=self.rapid_scan_interval,
         )
+
+    def is_rapid_scan_enabled(self, unit: TrackingUnitState) -> bool:
+        """Do thing."""
+
+        scan_state = self.units_scan_state.get(unit.get('unitnumber', ""))
+        return scan_state.enable_rapid_scan if scan_state else False
+
+    def enable_rapid_scan(self, unit: TrackingUnitState, value: bool):
+        """Do thing."""
+
+        scan_state = self.units_scan_state.get(unit.get('unitnumber', ""))
+        if scan_state:
+            scan_state.enable_rapid_scan = value
 
     async def _async_update_data(self) -> dict[str, TrackingUnitState]:
         """Update data using API."""
@@ -84,12 +115,20 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
 
             for unit in self.units:
                 unitnumber = unit["unitnumber"]
-                try:
-                    fetchedData[unitnumber] = await self.client.async_get_last_transmit(unitnumber)
-                except ZeroApiClientAuthenticationError as exception:
-                    raise ConfigEntryAuthFailed(exception) from exception
-                except ZeroApiClientError as exception:
-                    raise UpdateFailed(exception) from exception
+                rapid = self.units_scan_state[unitnumber].enable_rapid_scan or self.units_scan_state[unitnumber].rapid_scan_auto_enabled
+                interval = self.rapid_scan_interval if rapid else self.scan_interval
+                last_updated = self.units_scan_state[unitnumber].data_last_updated_time
+                if (timeNow - last_updated) > interval:
+                    self.units_scan_state[unitnumber].data_last_updated_time = timeNow
+                    try:
+                        fetchedData[unitnumber] = await self.client.async_get_last_transmit(unitnumber)
+                        ignition = parse_state_as_bool(fetchedData[unitnumber].get('ignition', False))
+                        charging = parse_state_as_bool(fetchedData[unitnumber].get('charging', False))
+                        self.units_scan_state[unitnumber].rapid_scan_auto_enabled = (ignition if ignition else False) or (charging if charging else False)
+                    except ZeroApiClientAuthenticationError as exception:
+                        raise ConfigEntryAuthFailed(exception) from exception
+                    except ZeroApiClientError as exception:
+                        raise UpdateFailed(exception) from exception
 
         else:
             raise UpdateFailed("Remote api client isn't available, unknown error")

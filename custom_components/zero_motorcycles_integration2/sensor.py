@@ -103,7 +103,7 @@ SENSORS = (
         icon="mdi:gauge",
         device_class=SensorDeviceClass.SPEED,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfSpeed.MILES_PER_HOUR,
+        native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
     ),
     ZeroSensorEntityDescription(
         key="heading",
@@ -142,7 +142,7 @@ SENSORS = (
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: entity_platform.AddEntitiesCallback):
     """Set up the sensor platform."""
 
-    coordinator : ZeroCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: ZeroCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
         [

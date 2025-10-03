@@ -22,13 +22,16 @@ from .api import (
     ZeroApiClientCommunicationError,
     ZeroApiClientError,
 )
-from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, LOGGER, SCAN_INTERVAL_MINIMUM
+from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, LOGGER, DEFAULT_RAPID_SCAN_INTERVAL, CONF_RAPID_SCAN_INTERVAL
 
 SIMPLE_OPTIONS_SCHEMA = vol.Schema(
     {
         vol.Optional(
             CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
-        ): vol.All(cv.time_period, vol.Range(min=SCAN_INTERVAL_MINIMUM)),
+        ): vol.All(cv.time_period, cv.positive_time_period),
+        vol.Optional(
+            CONF_RAPID_SCAN_INTERVAL, default=DEFAULT_RAPID_SCAN_INTERVAL
+        ): vol.All(cv.time_period, cv.positive_time_period),
     }
 )
 
@@ -76,13 +79,17 @@ class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_USERNAME
+                        CONF_USERNAME,
+                        default=user_input.get(CONF_USERNAME) if user_input else ""
                     ): selector.TextSelector(
                         selector.TextSelectorConfig(
                             type=selector.TextSelectorType.TEXT
                         ),
                     ),
-                    vol.Required(CONF_PASSWORD): selector.TextSelector(
+                    vol.Required(
+                        CONF_PASSWORD,
+                        default=user_input.get(CONF_PASSWORD) if user_input else ""
+                    ): selector.TextSelector(
                         selector.TextSelectorConfig(
                             type=selector.TextSelectorType.PASSWORD
                         ),

@@ -120,6 +120,13 @@ def parse_state_as_bool(state: bool | int | float | str) -> bool | None:
         state = None
     return state
 
+
+def parse_state_as_bool_or(state: bool | int | float | str, default: bool = False) -> bool:
+    """Interpret one of the many values the api provides for toggle states as a bool."""
+    value = parse_state_as_bool(state)
+    return value if value else default
+
+
 class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
     """integration_blueprint binary_sensor class."""
 

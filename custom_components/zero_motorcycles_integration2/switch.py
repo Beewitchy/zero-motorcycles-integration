@@ -1,6 +1,6 @@
 """Switch for ZeroMotorcycles."""
 
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable
 from dataclasses import dataclass
 import logging
 from typing import Any
@@ -8,15 +8,14 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from propcache.api import cached_property
 
 from .const import DOMAIN
 from .api import TrackingUnit, TrackingUnitState
-from .coordinator import ZeroCoordinator, UnitScanState
+from .coordinator import ZeroCoordinator
 from .entity import ZeroEntity
-from .binary_sensor import parse_state_as_bool_or
+
 
 PARALLEL_UPDATES = 1
 

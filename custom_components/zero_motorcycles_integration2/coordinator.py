@@ -10,8 +10,6 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .binary_sensor import parse_state_as_bool
-
 from .api import (
     TrackingUnit,
     TrackingUnitState,
@@ -20,6 +18,23 @@ from .api import (
     ZeroApiClientError,
 )
 from .const import DEFAULT_SCAN_INTERVAL, LOGGER, CONF_RAPID_SCAN_INTERVAL, DEFAULT_RAPID_SCAN_INTERVAL
+
+
+def parse_state_as_bool(state: bool | int | float | str) -> bool | None:
+    """Interpret one of the many values the api provides for toggle states as a bool."""
+    if isinstance(state, bool):
+        return state
+    elif isinstance(state, str):
+        return state.lower() in {"true", "on", "1"}
+    elif state is not None:
+        return bool(state)
+    return None
+
+
+def parse_state_as_bool_or(state: bool | int | float | str, default: bool = False) -> bool:
+    """Interpret one of the many values the api provides for toggle states as a bool."""
+    value = parse_state_as_bool(state)
+    return value if value else default
 
 
 class UnitScanState:

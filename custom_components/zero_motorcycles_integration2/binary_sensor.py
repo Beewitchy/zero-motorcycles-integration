@@ -16,7 +16,7 @@ from homeassistant.helpers import entity_platform
 
 from .api import TrackingUnit, TrackingUnitStateKeys
 from .const import DOMAIN, LOGGER
-from .coordinator import ZeroCoordinator
+from .coordinator import ZeroCoordinator, parse_state_as_bool
 from .entity import ZeroEntity
 
 
@@ -31,6 +31,7 @@ class ZeroBinarySensorEntityDescription(BinarySensorEntityDescription):
     def data_key(self) -> TrackingUnitStateKeys:
         """Literalifies."""
         return cast(TrackingUnitStateKeys, self.key)
+
 
 SENSORS = (
     ZeroBinarySensorEntityDescription(
@@ -107,24 +108,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         ],
         True
     )
-
-def parse_state_as_bool(state: bool | int | float | str) -> bool | None:
-    """Interpret one of the many values the api provides for toggle states as a bool."""
-    if isinstance(state, bool):
-        return state
-    elif isinstance(state, str):
-        state = state.lower() in {"true", "on", "1"}
-    elif state is not None:
-        state = bool(state)
-    else:
-        state = None
-    return state
-
-
-def parse_state_as_bool_or(state: bool | int | float | str, default: bool = False) -> bool:
-    """Interpret one of the many values the api provides for toggle states as a bool."""
-    value = parse_state_as_bool(state)
-    return value if value else default
 
 
 class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):

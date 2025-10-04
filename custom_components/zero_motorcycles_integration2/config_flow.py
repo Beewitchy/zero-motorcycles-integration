@@ -9,7 +9,12 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
 from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv, selector
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.selector import (
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
@@ -79,19 +84,17 @@ class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_USERNAME,
-                        default=user_input.get(CONF_USERNAME) if user_input else ""
-                    ): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            type=selector.TextSelectorType.TEXT
+                        CONF_USERNAME
+                    ): TextSelector(
+                        TextSelectorConfig(
+                            type=TextSelectorType.TEXT
                         ),
                     ),
                     vol.Required(
-                        CONF_PASSWORD,
-                        default=user_input.get(CONF_PASSWORD) if user_input else ""
-                    ): selector.TextSelector(
-                        selector.TextSelectorConfig(
-                            type=selector.TextSelectorType.PASSWORD
+                        CONF_PASSWORD
+                    ): TextSelector(
+                        TextSelectorConfig(
+                            type=TextSelectorType.PASSWORD
                         ),
                     ),
                 }

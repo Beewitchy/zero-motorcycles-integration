@@ -7,7 +7,16 @@
                     "username": "Username",
                     "password": "Password"
                 }
-            },
+            }
+        },
+        "error": {
+            "auth": "Username/Password is wrong.",
+            "connection": "Unable to connect to the server.",
+            "unknown": "Unknown error occurred."
+        }
+    },
+    "options": {
+        "step": {
             "init": {
                 "description": "Data update intervals",
                 "data": {
@@ -15,11 +24,6 @@
                     "rapid_scan_interval": "Active Interval"
                 }
             }
-        },
-        "error": {
-            "auth": "Username/Password is wrong.",
-            "connection": "Unable to connect to the server.",
-            "unknown": "Unknown error occurred."
         }
     }
 }

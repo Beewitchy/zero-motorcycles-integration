@@ -25,8 +25,8 @@ from .const import LOGGER, CONF_RAPID_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, DEFA
 
 OPTIONS_VALIDATOR_SCHEMA = vol.Schema(
     {
-        vol.Optional(CONF_SCAN_INTERVAL): cv.positive_time_period,
-        vol.Optional(CONF_RAPID_SCAN_INTERVAL): cv.positive_time_period,
+        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.positive_time_period,
+        vol.Optional(CONF_RAPID_SCAN_INTERVAL, default=DEFAULT_RAPID_SCAN_INTERVAL): cv.positive_time_period,
     }
 )
 

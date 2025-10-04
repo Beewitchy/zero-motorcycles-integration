@@ -27,14 +27,14 @@ from .api import (
     ZeroApiClientCommunicationError,
     ZeroApiClientError,
 )
-from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, LOGGER, DEFAULT_RAPID_SCAN_INTERVAL, CONF_RAPID_SCAN_INTERVAL
+from .const import DOMAIN, LOGGER, CONF_RAPID_SCAN_INTERVAL
 
 OPTIONS_SCHEMA = {
     vol.Optional(
-        CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+        CONF_SCAN_INTERVAL
     ): DurationSelector(DurationSelectorConfig(allow_negative=False)),
     vol.Optional(
-        CONF_RAPID_SCAN_INTERVAL, default=DEFAULT_RAPID_SCAN_INTERVAL
+        CONF_RAPID_SCAN_INTERVAL
     ): DurationSelector(DurationSelectorConfig(allow_negative=False)),
 }
 

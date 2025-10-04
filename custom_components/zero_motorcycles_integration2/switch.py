@@ -27,22 +27,18 @@ class ZeroSwitchEntityDescription(SwitchEntityDescription):
     """Describes a switch entity."""
 
     value_fn: Callable[[ZeroCoordinator, TrackingUnitState], bool]
-    set_fn: Callable[[ZeroCoordinator, TrackingUnitState, bool]]
-    is_available: Callable[[ZeroCoordinator, TrackingUnitState], bool] = lambda _,_1: True
+    set_fn: Callable[[ZeroCoordinator, TrackingUnitState, bool], None]
+    is_available: Callable[[ZeroCoordinator, TrackingUnitState], bool] = lambda _, _1: True
 
 
-SWITCHES = (
+SWITCHES = list({
     ZeroSwitchEntityDescription(
         key="rapid_scan",
+        name="Active Scan",
         value_fn=lambda co, unit: co.is_rapid_scan_enabled(unit),
         set_fn=lambda co, unit, value: co.enable_rapid_scan(unit, value),
-    ),
-    ZeroSwitchEntityDescription(
-        key="super_alert",
-        value_fn=lambda co, unit: False,
-        set_fn=lambda co, unit, value: (),
     )
-)
+})
 
 
 async def async_setup_entry(
@@ -84,11 +80,11 @@ class ZeroSwitch(ZeroEntity, SwitchEntity):
         self.entity_description = entity_description
         self._attr_unique_id = f"{self.vin}-{entity_description.key}"
 
-    @cached_property
-    def is_on(self) -> bool | None:
+    @property
+    def is_on(self) -> bool:
         """Return the entity value to represent the entity state."""
 
-        return self.entity_description.value_fn(self.coordinator, self.unit_state) if self.unit_state else None
+        return self.entity_description.value_fn(self.coordinator, self.unit_state) if self.unit_state else False
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""

@@ -103,12 +103,31 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
         scan_state = self.units_scan_state.get(unit.get('unitnumber', ""))
         return scan_state.enable_rapid_scan if scan_state else False
 
+    def is_rapid_scan_auto_enabled(self, unit: TrackingUnitState) -> bool:
+        """Do thing."""
+
+        scan_state = self.units_scan_state.get(unit.get('unitnumber', ""))
+        return scan_state.rapid_scan_auto_enabled if scan_state else False
+
+    def apply_scan_interval(self):
+        """Do thing."""
+
+        new_interval = self.rapid_scan_interval if any((scan_state.enable_rapid_scan or scan_state.rapid_scan_auto_enabled) for scan_state in self.units_scan_state.values()) else self.scan_interval
+        if new_interval != self.update_interval:
+            LOGGER.debug("new update interval is %s", new_interval)
+        self.update_interval = new_interval
+
     def enable_rapid_scan(self, unit: TrackingUnitState, value: bool):
         """Do thing."""
 
         scan_state = self.units_scan_state.get(unit.get('unitnumber', ""))
         if scan_state:
             scan_state.enable_rapid_scan = value
+            LOGGER.debug("rapid scan is now %s for %s", value, unit)
+            self.update_interval = self.rapid_scan_interval
+        else:
+            LOGGER.warning("failed to enable rapid scan: %s is unknown", unit)
+        # return self.async_request_refresh()
 
     async def _async_update_data(self) -> dict[str, TrackingUnitState]:
         """Update data using API."""
@@ -165,11 +184,8 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
                     raise ConfigEntryAuthFailed(exception) from exception
                 except ZeroApiClientError as exception:
                     raise UpdateFailed(exception) from exception
-                rapid = scan_state.enable_rapid_scan or scan_state.rapid_scan_auto_enabled
-                new_interval = self.rapid_scan_interval if rapid else self.scan_interval
-                if self.update_interval != new_interval:
-                    LOGGER.debug("new update interval for %s: %s", unitnumber, new_interval)
-                self.update_interval = new_interval
+
+                self.apply_scan_interval()
 
         else:
             raise UpdateFailed("Remote api client isn't available, unknown error")

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import cast
+from typing import cast, Any
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -14,7 +14,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_platform
 
-from .api import TrackingUnit, TrackingUnitStateKeys
+from .api import TrackingUnit, TrackingUnitState, TrackingUnitStateKeys
 from .const import DOMAIN, LOGGER
 from .coordinator import ZeroCoordinator, parse_state_as_bool
 from .entity import ZeroEntity
@@ -26,6 +26,7 @@ class ZeroBinarySensorEntityDescription(BinarySensorEntityDescription):
 
     off_icon: str | None = None
     value_fn: Callable[[bool], bool] = lambda sv: sv
+    data_fn: Callable[[ZeroCoordinator, TrackingUnitState], str | int | bool | None] | None = None
 
     @property
     def data_key(self) -> TrackingUnitStateKeys:
@@ -91,6 +92,17 @@ SENSORS = (
     )
 )
 
+LOGICAL_SENSORS = list({
+    ZeroBinarySensorEntityDescription(
+        key="auto_rapid_scan",
+        name="Auto Active Scan",
+        icon="mdi:toggle-switch",
+        off_icon="mdi:toggle-switch-off",
+        device_class=BinarySensorDeviceClass.RUNNING,
+        data_fn=lambda co, unit: co.is_rapid_scan_enabled(unit)
+    )
+})
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: entity_platform.AddEntitiesCallback):
     """Set up the binary_sensor platform."""
 
@@ -130,12 +142,18 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
 
-        state = self.coordinator.data.get(self.unitnumber, {}).get(self.entity_description.data_key) if self.coordinator.data else None
-        LOGGER.debug(
-            "Sensor value for %s is %s",
-            self.unique_id,
-            state,
-        )
+        state: Any | None = None
+
+        if self.entity_description.data_fn:
+            unit_state = self.coordinator.data.get(self.unitnumber, {})
+            state = self.entity_description.data_fn(self.coordinator, unit_state)
+        else:
+            state = self.coordinator.data.get(self.unitnumber, {}).get(self.entity_description.data_key) if self.coordinator.data else None
+            LOGGER.debug(
+                "Sensor value for %s is %s",
+                self.unique_id,
+                state,
+            )
 
         state = parse_state_as_bool(state)
 

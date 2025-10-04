@@ -99,7 +99,7 @@ LOGICAL_SENSORS = list({
         icon="mdi:toggle-switch",
         off_icon="mdi:toggle-switch-off",
         device_class=BinarySensorDeviceClass.RUNNING,
-        data_fn=lambda co, unit: co.is_rapid_scan_enabled(unit)
+        data_fn=lambda co, unit: co.is_rapid_scan_auto_enabled(unit)
     )
 })
 

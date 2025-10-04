@@ -26,9 +26,9 @@ _LOGGER = logging.getLogger(__name__)
 class ZeroSwitchEntityDescription(SwitchEntityDescription):
     """Describes a switch entity."""
 
-    value_fn: Callable[[ZeroCoordinator, TrackingUnitState], bool]
-    set_fn: Callable[[ZeroCoordinator, TrackingUnitState, bool], None]
-    is_available: Callable[[ZeroCoordinator, TrackingUnitState], bool] = lambda _, _1: True
+    value_fn: Callable[[ZeroCoordinator, TrackingUnit], bool]
+    set_fn: Callable[[ZeroCoordinator, TrackingUnit, bool], None]
+    is_available: Callable[[ZeroCoordinator, TrackingUnit], bool] = lambda _, _1: True
 
 
 SWITCHES = list({
@@ -80,26 +80,21 @@ class ZeroSwitch(ZeroEntity, SwitchEntity):
         self.entity_description = entity_description
         self._attr_unique_id = f"{self.vin}-{entity_description.key}"
 
-    @property
-    def is_on(self) -> bool:
-        """Return the entity value to represent the entity state."""
-
-        return self.entity_description.value_fn(self.coordinator, self.unit_state) if self.unit_state else False
-
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
-        if self.unit_state:
-            self.entity_description.set_fn(self.coordinator, self.unit_state, True)
-            self.coordinator.async_update_listeners()
+        if self.unit:
+            self.entity_description.set_fn(self.coordinator, self.unit, True)
+        await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
-        if self.unit_state:
-            self.entity_description.set_fn(self.coordinator, self.unit_state, False)
-            self.coordinator.async_update_listeners()
+        if self.unit:
+            self.entity_description.set_fn(self.coordinator, self.unit, False)
+        await self.coordinator.async_request_refresh()
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
+    @property
+    def is_on(self) -> bool:
+        """Return the state of the switch."""
 
-        self.unit_state = self.coordinator.data.get(self.unitnumber)
+        return self.entity_description.value_fn(self.coordinator, self.unit) if self.unit else False
+

@@ -97,27 +97,19 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
             update_interval=self.rapid_scan_interval,
         )
 
-    def is_rapid_scan_enabled(self, unit: TrackingUnitState) -> bool:
+    def is_rapid_scan_enabled(self, unit: TrackingUnit) -> bool:
         """Do thing."""
 
         scan_state = self.units_scan_state.get(unit.get('unitnumber', ""))
         return scan_state.enable_rapid_scan if scan_state else False
 
-    def is_rapid_scan_auto_enabled(self, unit: TrackingUnitState) -> bool:
+    def is_rapid_scan_auto_enabled(self, unit: TrackingUnit) -> bool:
         """Do thing."""
 
         scan_state = self.units_scan_state.get(unit.get('unitnumber', ""))
         return scan_state.rapid_scan_auto_enabled if scan_state else False
 
-    def apply_scan_interval(self):
-        """Do thing."""
-
-        new_interval = self.rapid_scan_interval if any((scan_state.enable_rapid_scan or scan_state.rapid_scan_auto_enabled) for scan_state in self.units_scan_state.values()) else self.scan_interval
-        if new_interval != self.update_interval:
-            LOGGER.debug("new update interval is %s", new_interval)
-        self.update_interval = new_interval
-
-    def enable_rapid_scan(self, unit: TrackingUnitState, value: bool):
+    def enable_rapid_scan(self, unit: TrackingUnit, value: bool):
         """Do thing."""
 
         scan_state = self.units_scan_state.get(unit.get('unitnumber', ""))
@@ -128,6 +120,14 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
         else:
             LOGGER.warning("failed to enable rapid scan: %s is unknown", unit)
         # return self.async_request_refresh()
+
+    def apply_scan_interval(self):
+        """Do thing."""
+
+        new_interval = self.rapid_scan_interval if any((scan_state.enable_rapid_scan or scan_state.rapid_scan_auto_enabled) for scan_state in self.units_scan_state.values()) else self.scan_interval
+        if new_interval != self.update_interval:
+            LOGGER.debug("new update interval is %s", new_interval)
+        self.update_interval = new_interval
 
     async def _async_update_data(self) -> dict[str, TrackingUnitState]:
         """Update data using API."""

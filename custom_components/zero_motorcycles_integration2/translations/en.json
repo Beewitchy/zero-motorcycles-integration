@@ -7,6 +7,13 @@
                     "username": "Username",
                     "password": "Password"
                 }
+            },
+            "init": {
+                "description": "Data update intervals",
+                "data": {
+                    "scan_interval": "Idle Interval",
+                    "rapid_scan_interval": "Active Interval"
+                }
             }
         },
         "error": {

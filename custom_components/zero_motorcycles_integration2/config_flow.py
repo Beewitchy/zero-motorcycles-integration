@@ -38,7 +38,7 @@ OPTIONS_SCHEMA = {
     ): DurationSelector(DurationSelectorConfig(allow_negative=False)),
 }
 
-CONFIG_SCHEMA = {
+USER_SCHEMA = {
     vol.Required(
         CONF_USERNAME
     ): TextSelector(
@@ -53,6 +53,10 @@ CONFIG_SCHEMA = {
             type=TextSelectorType.PASSWORD
         ),
     ),
+}
+
+CONFIG_SCHEMA = {
+    **USER_SCHEMA,
     **OPTIONS_SCHEMA
 }
 
@@ -97,7 +101,7 @@ class ZeroIntegrationConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(CONFIG_SCHEMA),
+            data_schema=vol.Schema(USER_SCHEMA),
             errors=_errors,
         )
 

@@ -53,6 +53,7 @@ class UnitScanState:
 
     enable_rapid_scan: bool = False
     rapid_scan_auto_enabled: bool = False
+    update_now: bool = True
     data_last_updated_time: datetime = datetime.min
 
 
@@ -86,6 +87,8 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
             CONF_RAPID_SCAN_INTERVAL,
             DEFAULT_RAPID_SCAN_INTERVAL,
         )
+
+        LOGGER.debug("set scan interval to %s, rapid %s", self.scan_interval, self.rapid_scan_interval)
 
         super().__init__(
             hass=hass,
@@ -127,7 +130,7 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
 
         if self.client:
             timeNow = datetime.now()
-            if len(self.units) == 0 or (timeNow - self.units_last_updated_time) > self.refresh_units_interval:
+            if len(self.units) == 0 or (timeNow - self.units_last_updated_time) >= self.refresh_units_interval:
                 self.units_last_updated_time = timeNow
                 try:
                     self.units = await self.client.async_get_units()
@@ -150,20 +153,23 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
                     unitnumber,
                     UnitScanState()
                 )
+                LOGGER.debug("fetching data for %s", unitnumber)
+                scan_state.data_last_updated_time = timeNow
+                scan_state.update_now = False
+                try:
+                    fetchedData[unitnumber] = await self.client.async_get_last_transmit(unitnumber)
+                    ignition = parse_state_as_bool(fetchedData[unitnumber].get('ignition', False))
+                    charging = parse_state_as_bool(fetchedData[unitnumber].get('charging', False))
+                    scan_state.rapid_scan_auto_enabled = (ignition if ignition else False) or (charging if charging else False)
+                except ZeroApiClientAuthenticationError as exception:
+                    raise ConfigEntryAuthFailed(exception) from exception
+                except ZeroApiClientError as exception:
+                    raise UpdateFailed(exception) from exception
                 rapid = scan_state.enable_rapid_scan or scan_state.rapid_scan_auto_enabled
-                interval = self.rapid_scan_interval if rapid else self.scan_interval
-                last_updated = scan_state.data_last_updated_time
-                if (timeNow - last_updated) > interval:
-                    scan_state.data_last_updated_time = timeNow
-                    try:
-                        fetchedData[unitnumber] = await self.client.async_get_last_transmit(unitnumber)
-                        ignition = parse_state_as_bool(fetchedData[unitnumber].get('ignition', False))
-                        charging = parse_state_as_bool(fetchedData[unitnumber].get('charging', False))
-                        scan_state.rapid_scan_auto_enabled = (ignition if ignition else False) or (charging if charging else False)
-                    except ZeroApiClientAuthenticationError as exception:
-                        raise ConfigEntryAuthFailed(exception) from exception
-                    except ZeroApiClientError as exception:
-                        raise UpdateFailed(exception) from exception
+                new_interval = self.rapid_scan_interval if rapid else self.scan_interval
+                if self.update_interval != new_interval:
+                    LOGGER.debug("new update interval for %s: %s", unitnumber, new_interval)
+                self.update_interval = new_interval
 
         else:
             raise UpdateFailed("Remote api client isn't available, unknown error")

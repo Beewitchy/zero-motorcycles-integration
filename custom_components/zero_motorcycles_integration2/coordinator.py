@@ -128,18 +128,28 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
 
                 LOGGER.debug("received units from API %s", self.units)
 
+                updated_scan_state: dict[str, UnitScanState] = {}
+                for unit in self.units:
+                    unitnumber = unit['unitnumber']
+                    updated_scan_state[unitnumber] = self.units_scan_state.get(unitnumber, UnitScanState())
+                self.units_scan_state = updated_scan_state
+
             for unit in self.units:
                 unitnumber = unit["unitnumber"]
-                rapid = self.units_scan_state[unitnumber].enable_rapid_scan or self.units_scan_state[unitnumber].rapid_scan_auto_enabled
+                scan_state = self.units_scan_state.get(
+                    unitnumber,
+                    UnitScanState()
+                )
+                rapid = scan_state.enable_rapid_scan or scan_state.rapid_scan_auto_enabled
                 interval = self.rapid_scan_interval if rapid else self.scan_interval
-                last_updated = self.units_scan_state[unitnumber].data_last_updated_time
+                last_updated = scan_state.data_last_updated_time
                 if (timeNow - last_updated) > interval:
-                    self.units_scan_state[unitnumber].data_last_updated_time = timeNow
+                    scan_state.data_last_updated_time = timeNow
                     try:
                         fetchedData[unitnumber] = await self.client.async_get_last_transmit(unitnumber)
                         ignition = parse_state_as_bool(fetchedData[unitnumber].get('ignition', False))
                         charging = parse_state_as_bool(fetchedData[unitnumber].get('charging', False))
-                        self.units_scan_state[unitnumber].rapid_scan_auto_enabled = (ignition if ignition else False) or (charging if charging else False)
+                        scan_state.rapid_scan_auto_enabled = (ignition if ignition else False) or (charging if charging else False)
                     except ZeroApiClientAuthenticationError as exception:
                         raise ConfigEntryAuthFailed(exception) from exception
                     except ZeroApiClientError as exception:

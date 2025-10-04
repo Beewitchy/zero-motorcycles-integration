@@ -5,15 +5,15 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
 from homeassistant.core import callback
-from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
+    DurationSelector,
+    DurationSelectorConfig
 )
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.schema_config_entry_flow import (
@@ -29,23 +29,39 @@ from .api import (
 )
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, LOGGER, DEFAULT_RAPID_SCAN_INTERVAL, CONF_RAPID_SCAN_INTERVAL
 
-SIMPLE_OPTIONS_SCHEMA = vol.Schema(
-    {
-        vol.Optional(
-            CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
-        ): vol.All(cv.time_period, cv.positive_time_period),
-        vol.Optional(
-            CONF_RAPID_SCAN_INTERVAL, default=DEFAULT_RAPID_SCAN_INTERVAL
-        ): vol.All(cv.time_period, cv.positive_time_period),
-    }
-)
+OPTIONS_SCHEMA = {
+    vol.Optional(
+        CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+    ): DurationSelector(DurationSelectorConfig(allow_negative=False)),
+    vol.Optional(
+        CONF_RAPID_SCAN_INTERVAL, default=DEFAULT_RAPID_SCAN_INTERVAL
+    ): DurationSelector(DurationSelectorConfig(allow_negative=False)),
+}
+
+CONFIG_SCHEMA = {
+    vol.Required(
+        CONF_USERNAME
+    ): TextSelector(
+        TextSelectorConfig(
+            type=TextSelectorType.TEXT
+        ),
+    ),
+    vol.Required(
+        CONF_PASSWORD
+    ): TextSelector(
+        TextSelectorConfig(
+            type=TextSelectorType.PASSWORD
+        ),
+    ),
+    **OPTIONS_SCHEMA
+}
 
 OPTIONS_FLOW = {
-    "init": SchemaFlowFormStep(SIMPLE_OPTIONS_SCHEMA),
+    "init": SchemaFlowFormStep(vol.Schema(OPTIONS_SCHEMA)),
 }
 
 
-class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class ZeroIntegrationConfigFlow(ConfigFlow, domain=DOMAIN):
     """Configuration flow implementation."""
 
     VERSION = 1  # configuration flow version, if more info is needed change one up
@@ -81,24 +97,7 @@ class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_USERNAME
-                    ): TextSelector(
-                        TextSelectorConfig(
-                            type=TextSelectorType.TEXT
-                        ),
-                    ),
-                    vol.Required(
-                        CONF_PASSWORD
-                    ): TextSelector(
-                        TextSelectorConfig(
-                            type=TextSelectorType.PASSWORD
-                        ),
-                    ),
-                }
-            ),
+            data_schema=vol.Schema(CONFIG_SCHEMA),
             errors=_errors,
         )
 
@@ -114,7 +113,7 @@ class ZeroIntegrationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(
-        config_entry: config_entries.ConfigEntry,
+        config_entry: ConfigEntry,
     ) -> SchemaOptionsFlowHandler:
         """Get options flow for this handler."""
         return SchemaOptionsFlowHandler(config_entry, OPTIONS_FLOW)

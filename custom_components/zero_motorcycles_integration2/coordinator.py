@@ -3,12 +3,15 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+import voluptuous as vol
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers import config_validation as cv
 
 from .api import (
     TrackingUnit,
@@ -17,7 +20,15 @@ from .api import (
     ZeroApiClientAuthenticationError,
     ZeroApiClientError,
 )
-from .const import DEFAULT_SCAN_INTERVAL, LOGGER, CONF_RAPID_SCAN_INTERVAL, DEFAULT_RAPID_SCAN_INTERVAL
+from .const import LOGGER, CONF_RAPID_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, DEFAULT_RAPID_SCAN_INTERVAL
+
+
+OPTIONS_VALIDATOR_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_SCAN_INTERVAL): cv.positive_time_period,
+        vol.Optional(CONF_RAPID_SCAN_INTERVAL): cv.positive_time_period,
+    }
+)
 
 
 def parse_state_as_bool(state: bool | int | float | str) -> bool | None:
@@ -66,13 +77,12 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
         """Initialize."""
         self.configEntry = configEntry
 
-        # check options https://developers.home-assistant.io/docs/config_entries_options_flow_handler
-        self.scan_interval = self.configEntry.options.get(
+        options = OPTIONS_VALIDATOR_SCHEMA(dict(configEntry.options))
+        self.scan_interval = options.get(
             CONF_SCAN_INTERVAL,
             DEFAULT_SCAN_INTERVAL,
         )
-
-        self.rapid_scan_interval = self.configEntry.options.get(
+        self.rapid_scan_interval = options.get(
             CONF_RAPID_SCAN_INTERVAL,
             DEFAULT_RAPID_SCAN_INTERVAL,
         )

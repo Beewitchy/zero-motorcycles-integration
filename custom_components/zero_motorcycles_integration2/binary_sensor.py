@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
 from dataclasses import dataclass
 from typing import cast, Any
 

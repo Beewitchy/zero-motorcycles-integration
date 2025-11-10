@@ -198,8 +198,10 @@ class ZeroSensor(ZeroEntity, SensorEntity):
 
         self._attr_native_value = state
 
+        datetime_data = self.coordinator.data.get(self.unitnumber, {}).get("datetime_actual") if self.coordinator.data else None
+
         self._attr_extra_state_attributes = {
-            "timestamp": self.coordinator.data.get(self.unitnumber, {}).get("datetime_actual") if self.coordinator.data else None
+            "timestamp": datetime.strptime(datetime_data, '%Y%m%d%H%M%S') if isinstance(datetime_data, str) else None
         }
 
         if isinstance(state, int | float) and self.entity_description.iconset:

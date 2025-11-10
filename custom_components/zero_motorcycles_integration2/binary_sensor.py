@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 from dataclasses import dataclass
 from typing import cast, Any
 
@@ -168,8 +169,10 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
 
         self._attr_is_on = state
 
+        datetime_data = self.coordinator.data.get(self.unitnumber, {}).get("datetime_actual") if self.coordinator.data else None
+
         self._attr_extra_state_attributes = {
-            "timestamp": self.coordinator.data.get(self.unitnumber, {}).get("datetime_actual") if self.coordinator.data else None
+            "timestamp": datetime.strptime(datetime_data, '%Y%m%d%H%M%S') if isinstance(datetime_data, str) else None
         }
 
         if self.entity_description.off_icon:

@@ -60,7 +60,7 @@ def parse_state_as_date(state: datetime | str | Any | None) -> datetime | None:
         value = state
 
     if isinstance(value, datetime) and value.tzinfo is None:
-        value = value.replace(tzinfo=dt_util.get_default_time_zone())
+        value = value.replace(tzinfo=dt_util.UTC)
 
     return value
 

@@ -17,7 +17,7 @@ from homeassistant.helpers import entity_platform
 
 from .api import TrackingUnit, TrackingUnitState, TrackingUnitStateKeys
 from .const import DOMAIN, LOGGER
-from .coordinator import ZeroCoordinator, parse_state_as_bool
+from .coordinator import ZeroCoordinator, parse_state_as_bool, parse_state_as_date
 from .entity import ZeroEntity
 
 
@@ -172,7 +172,7 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
         datetime_data = self.coordinator.data.get(self.unitnumber, {}).get("datetime_actual") if self.coordinator.data else None
 
         self._attr_extra_state_attributes = {
-            "timestamp": datetime.strptime(datetime_data, '%Y%m%d%H%M%S') if isinstance(datetime_data, str) else None
+            "timestamp": parse_state_as_date(datetime_data)
         }
 
         if self.entity_description.off_icon:

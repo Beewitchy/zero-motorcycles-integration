@@ -28,7 +28,7 @@ from homeassistant.util import dt as dt_util
 
 from .api import TrackingUnit, TrackingUnitStateKeys
 from .const import DOMAIN, LOGGER
-from .coordinator import ZeroCoordinator
+from .coordinator import ZeroCoordinator, parse_state_as_date
 from .entity import ZeroEntity
 
 
@@ -201,7 +201,7 @@ class ZeroSensor(ZeroEntity, SensorEntity):
         datetime_data = self.coordinator.data.get(self.unitnumber, {}).get("datetime_actual") if self.coordinator.data else None
 
         self._attr_extra_state_attributes = {
-            "timestamp": datetime.strptime(datetime_data, '%Y%m%d%H%M%S') if isinstance(datetime_data, str) else None
+            "timestamp": parse_state_as_date(datetime_data)
         }
 
         if isinstance(state, int | float) and self.entity_description.iconset:

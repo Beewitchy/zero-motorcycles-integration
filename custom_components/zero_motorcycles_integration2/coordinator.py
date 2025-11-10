@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from typing import Any
 
 import voluptuous as vol
 
@@ -12,6 +13,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers import config_validation as cv
+from homeassistant.util import dt as dt_util
 
 from .api import (
     TrackingUnit,
@@ -48,6 +50,21 @@ def parse_state_as_bool_or(state: bool | int | float | str, default: bool = Fals
     return value if value else default
 
 
+def parse_state_as_date(state: datetime | str | Any | None) -> datetime | None:
+    """Interpret a datetime value in the format the api uses."""
+
+    value: datetime | None = None
+    if isinstance(state, str):
+        return datetime.strptime(state, '%Y%m%d%H%M%S')
+    elif isinstance(state, datetime):
+        value = state
+
+    if isinstance(value, datetime) and value.tzinfo is None:
+        value = value.replace(tzinfo=dt_util.get_default_time_zone())
+
+    return value
+
+
 class UnitScanState:
     """Thingy."""
 
@@ -69,6 +86,8 @@ class ZeroCoordinator(DataUpdateCoordinator[dict[str, TrackingUnitState] | None]
     units_scan_state: dict[str, UnitScanState] = {}
     scan_interval: timedelta = DEFAULT_SCAN_INTERVAL
     rapid_scan_interval: timedelta = DEFAULT_RAPID_SCAN_INTERVAL
+
+    data_timestamp: datetime | None = None
 
     def __init__(
         self,

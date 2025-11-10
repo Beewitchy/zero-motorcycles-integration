@@ -93,6 +93,7 @@ class ZeroTrackerEntity(ZeroEntity, TrackerEntity):
                 "gps_connected",
                 "gps_valid",
                 "ignition",
-                "address"
+                "address",
+                "datetime_utc"
             }
         }

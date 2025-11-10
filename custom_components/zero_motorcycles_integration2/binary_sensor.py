@@ -168,6 +168,10 @@ class ZeroBinarySensor(ZeroEntity, BinarySensorEntity):
 
         self._attr_is_on = state
 
+        self._attr_extra_state_attributes = {
+            "timestamp": self.coordinator.data.get(self.unitnumber, {}).get("datetime_actual") if self.coordinator.data else None
+        }
+
         if self.entity_description.off_icon:
             self._attr_icon = self.entity_description.icon if self._attr_is_on else self.entity_description.off_icon
 
